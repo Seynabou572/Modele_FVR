@@ -58,7 +58,7 @@ species cohorte_larvaire {
     action emerger {
         // Arrondi stochastique : évite de perdre systématiquement les cohortes
         // dont l'effectif est inférieur à un super-individu.
-        float nb_exact <- effectif / float(echelle_superindividu);
+        float nb_exact <- effectif / float(echelle_si_vecteur);
         int   nb_agents <- int(nb_exact);
         if (flip(nb_exact - nb_agents)) { nb_agents <- nb_agents + 1; }
 
@@ -67,7 +67,7 @@ species cohorte_larvaire {
                 create vecteur {
                     type_vecteur      <- myself.type_vecteur;
                     etat_sante        <- myself.infectee ? "I" : "S";
-                    taille_groupe     <- echelle_superindividu;
+                    taille_groupe     <- echelle_si_vecteur;
                     vitesse           <- (myself.type_vecteur = "aedes")
                                          ? vitesse_aedes : vitesse_culex;
                     mare_origine      <- myself.gite;

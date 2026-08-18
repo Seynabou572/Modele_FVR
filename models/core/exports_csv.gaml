@@ -72,7 +72,7 @@ global {
               length(humain where (each.etat_sante = "I")) * echelle_superindividu,
               length(humain where (each.etat_sante = "R")) * echelle_superindividu,
               int(S_c_global), int(E_c_global), int(I_c_global), int(R_c_global),
-              length(vecteur) * echelle_superindividu]
+              length(vecteur) * echelle_si_vecteur]
             to: csv_populations format: "csv" rewrite: false;
     }
 
@@ -104,13 +104,13 @@ global {
 
     reflex export_moustiques when: export_detail {
         save [simulation_id, cycle,
-              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "S")) * echelle_superindividu,
-              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "E")) * echelle_superindividu,
-              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "I")) * echelle_superindividu,
-              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "S")) * echelle_superindividu,
-              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "E")) * echelle_superindividu,
-              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "I")) * echelle_superindividu,
-              length(vecteur) * echelle_superindividu]
+              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "S")) * echelle_si_vecteur,
+              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "E")) * echelle_si_vecteur,
+              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "I")) * echelle_si_vecteur,
+              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "S")) * echelle_si_vecteur,
+              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "E")) * echelle_si_vecteur,
+              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "I")) * echelle_si_vecteur,
+              length(vecteur) * echelle_si_vecteur]
             to: csv_moustiques format: "csv" rewrite: false;
     }
 

@@ -48,7 +48,7 @@ global {
                     create vecteur {
                         type_vecteur      <- "culex";
                         etat_sante        <- infecte ? "I" : "S";
-                        taille_groupe     <- echelle_superindividu;
+                        taille_groupe     <- echelle_si_vecteur;
                         vitesse           <- vitesse_culex;
                         mare_origine      <- m_c;
                         location          <- m_c.location;
@@ -80,9 +80,6 @@ global {
         rayon_piqure_animal      <- unite_z3 * 0.0018;
         rayon_depot_oeufs        <- unite_z3 * 0.0012;
         rayon_recherche_paturage <- unite_z3 * 0.05;
-        // Portée du vol de quête nocturne (Ae. vexans : plusieurs km ; Culex : ~500 m)
-        rayon_recherche_hote_aedes <- unite_z3 * 0.06;
-        rayon_recherche_hote_culex <- unite_z3 * 0.015;
 
         // Seul r est un paramètre fixe du R0. La survie journalière p est
         // désormais MESURÉE sur chaque fenêtre (morts biologiques / vecteurs-jours)
@@ -90,7 +87,7 @@ global {
         // core/r0_vectoriel.gaml. Les valeurs ci-dessous ne servent que d'amorce
         // avant la première fenêtre.
         r_hote           <- (duree_infection > 0.0) ? 1.0 / duree_infection : 0.0;
-        p_survie_vect    <- exp(-mu_v);
+        p_survie_vect    <- survie_aedes;
         ln_p_survie_vect <- ln(p_survie_vect);
         n_Aedes          <- duree_cycle_extrinseque;
         n_animal         <- duree_cycle_extrinseque;
@@ -99,7 +96,13 @@ global {
 
         write "Paramètres R0 :";
         write "  r = 1/duree_infection = " + with_precision(r_hote, 4);
-        write "  a attendu ~ 1/tau = " + with_precision(1.0 / cycle_gonotrophique(temperature), 4)
+        write "  unite_z3 = " + with_precision(unite_z3, 0)
+            + " (doit valoir ~32000 si la projection est bien métrique)";
+        write "  portée de vol : Aedes " + portee_vol_aedes_m + " m, Culex "
+            + portee_vol_culex_m + " m";
+        write "  a attendu ~ 1/tau : Aedes "
+            + with_precision(1.0 / cycle_gonotrophique(temperature, "aedes"), 4)
+            + " | Culex " + with_precision(1.0 / cycle_gonotrophique(temperature, "culex"), 4)
             + " piqûre/vecteur/jour à " + with_precision(temperature, 1) + " °C";
         write "  n (EIP) à " + with_precision(temperature, 1) + " °C = "
             + with_precision(eip_jours(temperature), 2) + " j";
@@ -133,11 +136,6 @@ global {
         saison <- calculer_saison(jour_debut_simulation);
         do mettre_a_jour_occsol_saisonnier(saison);
 
-        b_vh <- p_h;
-        b_va <- p_a;
-        c_hv <- p_vh;
-        c_av <- p_va;
-
         nb_agents_humains <- nb_humains_init;
         nb_agents_animaux <- nb_animaux_init;
 
@@ -146,7 +144,7 @@ global {
             if (camp != nil) {
                 create humain {
                     campement_origine <- camp;
-                    taille_groupe     <- echelle_superindividu;
+                    taille_groupe     <- echelle_si_vecteur;
                     location <- camp.location + {
                         rnd(-rayon_piqure_humain * 2, rayon_piqure_humain * 2),
                         rnd(-rayon_piqure_humain * 2, rayon_piqure_humain * 2)
@@ -163,7 +161,7 @@ global {
             if (camp != nil) {
                 create animal {
                     campement_origine <- camp;
-                    taille_groupe     <- echelle_superindividu;
+                    taille_groupe     <- echelle_si_vecteur;
                     location <- camp.location + {
                         rnd(-rayon_piqure_animal * 3, rayon_piqure_animal * 3),
                         rnd(-rayon_piqure_animal * 3, rayon_piqure_animal * 3)
@@ -196,7 +194,7 @@ global {
                 create vecteur {
                     type_vecteur     <- "aedes";
                     etat_sante       <- "I";
-                    taille_groupe    <- echelle_superindividu;
+                    taille_groupe    <- echelle_si_vecteur;
                     vitesse          <- vitesse_aedes;
                     mare_origine     <- mare_reference;
                     location         <- mare_reference.location;
@@ -231,7 +229,7 @@ global {
                 create vecteur {
                     type_vecteur     <- "aedes";
                     etat_sante       <- "I";
-                    taille_groupe    <- echelle_superindividu;
+                    taille_groupe    <- echelle_si_vecteur;
                     vitesse          <- vitesse_aedes;
                     mare_origine     <- mare_seche;
                     location         <- mare_seche.location;

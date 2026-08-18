@@ -32,7 +32,7 @@ species vecteur {
     float  vitesse;
     int    jours_dans_etat   <- 0;
     int    age               <- 0;
-    int    taille_groupe     <- echelle_superindividu;
+    int    taille_groupe     <- echelle_si_vecteur;
     mare   mare_origine      <- nil;
 
     // Avancement fractionnaire de l'incubation extrinsèque (0 vers 1). Permet
@@ -42,6 +42,11 @@ species vecteur {
     bool   est_cas_index_A   <- false;
     bool   est_cas_index_B   <- false;
     string origine_infection <- "aucune";
+
+    /** Transmission vecteur -> hôte par piqûre (compétence de l'espèce). */
+    float b_vecteur { return (type_vecteur = "aedes") ? b_aedes : b_culex; }
+    /** Transmission hôte -> vecteur par piqûre (compétence de l'espèce). */
+    float c_vecteur { return (type_vecteur = "aedes") ? c_aedes : c_culex; }
 
     reflex se_deplacer {
         list<humain> h_pr <- humain at_distance rayon_detection_v;
@@ -65,7 +70,7 @@ species vecteur {
     }
 
     reflex repas_sang {
-        float tau_j  <- world.cycle_gonotrophique(temperature);
+        float tau_j  <- world.cycle_gonotrophique(temperature, type_vecteur);
         float a_jour <- min(1.0, (1.0 / tau_j) * facteur_humidite * facteur_vent);
 
         if (flip(a_jour)) {
@@ -74,7 +79,7 @@ species vecteur {
             // dizaines de mètres du gîte. Sans cela les rencontres hôte/vecteur
             // sont quasi nulles et le taux de piqûre `a` s'effondre à zéro.
             float portee <- (type_vecteur = "aedes")
-                            ? rayon_recherche_hote_aedes : rayon_recherche_hote_culex;
+                            ? portee_vol_aedes_m : portee_vol_culex_m;
             list<animal> a_pr <- animal at_distance portee;
             list<humain> h_pr <- humain at_distance portee;
 
@@ -86,41 +91,44 @@ species vecteur {
                 bool sur_animal <- !empty(a_pr)
                                    and (empty(h_pr) or flip(preference_zoophilie));
 
+                float p_trans <- b_vecteur();   // pré-calculé : dans `ask`, le
+                float p_infec <- c_vecteur();   // contexte est l'hôte, pas le vecteur
+
                 if (sur_animal) {
                     animal cible <- one_of(a_pr);
                     location <- cible.location;   // la femelle rejoint son hôte
                     if (etat_sante = "I") {
                         ask cible {
-                            if (etat_sante = "S" and flip(b_va)) {
+                            if (etat_sante = "S" and flip(p_trans)) {
                                 etat_sante      <- "E";
                                 jours_dans_etat <- 0;
                                 nb_infections_totales <- nb_infections_totales + echelle_superindividu;
                                 incidence_c           <- incidence_c + echelle_superindividu;
                             }
                         }
-                    } else if (etat_sante = "S" and cible.etat_sante = "I" and flip(c_av)) {
+                    } else if (etat_sante = "S" and cible.etat_sante = "I" and flip(p_infec)) {
                         etat_sante        <- "E";
                         avancement_eip    <- 0.0;
                         origine_infection <- "horizontale";
-                        incidence_v       <- incidence_v + echelle_superindividu;
+                        incidence_v       <- incidence_v + echelle_si_vecteur;
                     }
                 } else {
                     humain cible <- one_of(h_pr);
                     location <- cible.location;   // la femelle rejoint son hôte
                     if (etat_sante = "I") {
                         ask cible {
-                            if (etat_sante = "S" and flip(b_vh)) {
+                            if (etat_sante = "S" and flip(p_trans)) {
                                 etat_sante      <- "E";
                                 jours_dans_etat <- 0;
                                 nb_infections_totales <- nb_infections_totales + echelle_superindividu;
                                 incidence_c           <- incidence_c + echelle_superindividu;
                             }
                         }
-                    } else if (etat_sante = "S" and cible.etat_sante = "I" and flip(c_hv)) {
+                    } else if (etat_sante = "S" and cible.etat_sante = "I" and flip(p_infec)) {
                         etat_sante        <- "E";
                         avancement_eip    <- 0.0;
                         origine_infection <- "horizontale";
-                        incidence_v       <- incidence_v + echelle_superindividu;
+                        incidence_v       <- incidence_v + echelle_si_vecteur;
                     }
                 }
             }
@@ -150,7 +158,7 @@ species vecteur {
      */
     reflex ponte_aedes
         when: type_vecteur = "aedes"
-          and (age mod max(1, int(world.cycle_gonotrophique(temperature)))) = 0 {
+          and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
         mare m <- mare closest_to self;
         if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
             and m.volume_eau = 0) {
@@ -175,7 +183,7 @@ species vecteur {
      */
     reflex ponte_culex
         when: type_vecteur = "culex"
-          and (age mod max(1, int(world.cycle_gonotrophique(temperature)))) = 0 {
+          and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
         mare m <- mare closest_to self;
         if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
             and m.volume_eau > 0) {
@@ -187,9 +195,9 @@ species vecteur {
 
     reflex mourir {
         age <- age + 1;
-        float mu_jour <- world.mortalite_adulte_journaliere(temperature, humidite_relative);
+        float mu_jour <- world.mortalite_adulte_journaliere(temperature, humidite_relative, type_vecteur);
         bool mort_n <- flip(mu_jour);
-        bool mort_a <- age > longevite_max_vecteur;
+        bool mort_a <- age > ((type_vecteur = "aedes") ? longevite_max_aedes : longevite_max_culex);
 
         if (mort_n or mort_a) {
             // Seules les morts BIOLOGIQUES alimentent l'estimation de la survie

@@ -33,10 +33,6 @@ global {
     float rayon_depot_oeufs        <- 0.0;
     float rayon_detection_v        <- 0.0;
     float rayon_recherche_paturage <- 0.0;
-    // Portée de la recherche nocturne d hote (vol de quete). Ae. vexans parcourt
-    // plusieurs km, Culex quelques centaines de metres. A CALIBRER.
-    float rayon_recherche_hote_aedes <- 0.0;
-    float rayon_recherche_hote_culex <- 0.0;
     float seuil_min_mare_m2            <- 300.0;
     float seuil_min_campement_m2       <- 300.0;
     float seuil_min_affichage_m2       <- 400.0;
@@ -49,9 +45,26 @@ global {
     // =========================================================================
     // SUPER-INDIVIDUS
     // =========================================================================
+    // Échelle des HÔTES : 1 agent = 20 têtes / 20 personnes.
     int echelle_superindividu <- 20;
-    int nb_humains_init <- 40;
-    int nb_animaux_init <- 50;
+
+    // Échelle des VECTEURS, distincte. Un moustique est ~10^4 fois plus
+    // nombreux qu'un ruminant : avec une échelle commune, représenter une
+    // densité vectorielle réaliste demanderait des millions d'agents, et la
+    // population reste en pratique bornée par `max_vecteurs`. Le rapport
+    // vecteurs/hôte `m` du R0 est donc calculé en INDIVIDUS RÉELS, en
+    // repondérant par les deux échelles (voir core/r0_vectoriel.gaml).
+    int echelle_si_vecteur <- 500;
+    // Densité d'hôtes calée sur la structure pastorale du Ferlo (Ancey et al.
+    // 2014, Pastoralism) : un campement héberge typiquement moins de 50 bovins
+    // et 50 ovins, soit ~100 têtes. Avec 150 campements et une échelle de 20
+    // individus par agent, cela donne ~500 agents animaux (10 000 têtes, soit
+    // 67 par campement) et ~100 agents humains (2 000 personnes, ~13 par
+    // campement pour 1-2 ménages). L'ancien réglage (50 et 40 agents) ne
+    // représentait que 6.7 animaux par campement, ce qui gonflait
+    // artificiellement le rapport vecteurs/hôte `m` du R0.
+    int nb_humains_init <- 100;
+    int nb_animaux_init <- 500;
     int nb_agents_humains <- 0;
     int nb_agents_animaux <- 0;
     int nb_campements     <- 0;
@@ -63,7 +76,6 @@ global {
     float mu_c    <- 1.0 / (5.0 * 365.0);
     float delta_c <- 0.01;
     float B_v     <- 10.0;
-    float mu_v    <- 1.0 / 21.0;
 
     // =========================================================================
     // PARAMÈTRES DE TRANSMISSION (Ross-Macdonald)
@@ -72,37 +84,42 @@ global {
     // Le taux de piqûre est porté par le cycle gonotrophique (tau), pas ici :
     // c'est ce qui évite le double comptage de l'ancien sigma_v.
     // =========================================================================
-    float p_h  <- 0.4;   // vecteur -> humain
-    float p_a  <- 0.7;   // vecteur -> animal
-    float p_vh <- 0.2;   // humain  -> vecteur
-    float p_va <- 0.8;   // animal  -> vecteur
-    float b_vh <- 0.0;
-    float b_va <- 0.0;
-    float c_hv <- 0.0;
-    float c_av <- 0.0;
+    // Compétence vectorielle mesurée sur des populations et des souches
+    // SÉNÉGALAISES (Diallo et al. 2016, Parasites & Vectors) : ces probabilités
+    // dépendent de l'espèce de VECTEUR, pas du type d'hôte.
+    //   b_* = transmission vecteur -> hôte par piqûre (taux de transmission
+    //         salivaire : Ae. vexans 13.3-33.3 %, Cx. poicilipes 11.1 %)
+    //   c_* = transmission hôte -> vecteur par piqûre (taux d'infection :
+    //         Ae. vexans 30-85 %, Cx. poicilipes 8.3-46.7 %)
+    float b_aedes <- 0.23;
+    float b_culex <- 0.11;
+    float c_aedes <- 0.57;
+    float c_culex <- 0.28;
 
-    // Fraction des repas pris sur un animal quand hôtes des deux types sont
-    // disponibles (Aedes/Culex du Ferlo sont majoritairement zoophiles).
-    // À CALIBRER.
-    float preference_zoophilie <- 0.8;
+    // Part des repas pris sur le bétail plutôt que sur l'humain. Ae. vexans
+    // arabiensis du Ferlo est très fortement zoophile : seuls 1.28 % des repas
+    // mixtes impliquaient un humain (Diallo et al. 2019, PLoS One).
+    float preference_zoophilie <- 0.98;
 
-    float duree_incubation        <- 4.0;
-    float duree_infection         <- 6.0;
-    float duree_cycle_extrinseque <- 10.0;   // EIP de repli si pas de température
+    // WOAH : incubation 12-72 h chez les ruminants adultes.
+    float duree_incubation <- 2.0;
+    // Virémie expérimentale chez l'agneau/le veau : pic à J2, ~3-5 j au total.
+    float duree_infection  <- 4.0;
+    // EIP de repli (valeur à 28 °C, Turell et al.) si la température manque.
+    float duree_cycle_extrinseque <- 10.5;
 
     // =========================================================================
     // PARAMÈTRES BIOLOGIQUES DES VECTEURS
     // =========================================================================
     float kappa_aedes  <- 0.5;      // Fraction des femelles qui pondent après un repas
     float lambda_aedes <- 100.0;    // Fécondité par cycle gonotrophique (par femelle)
-    float tau_aedes    <- 3.0;      // Cycle gonotrophique de repli (jours)
+    float tau_aedes    <- 4.0;      // Cycle gonotrophique, Ba et al. 2005 (Barkédji)
     float beta_aedes   <- 0.60;     // Fraction des œufs quiescents qui éclosent à l'inondation
     float phi_aedes    <- 0.995;    // Survie JOURNALIÈRE des œufs quiescents. À CALIBRER.
                                     // (appliquée jour par jour : 0.995/j => demi-vie ~140 j,
                                     //  compatible avec la survie inter-saisonnière réelle)
     float survie_larvaire_aedes <- 0.85;  // Survie journalière des stades aquatiques Aedes
     float Td_aedes     <- 7.0;      // Durée minimale de sécheresse avant éclosion
-    float duree_phase_oeuf_aedes <- 7.0;  // Durée de la phase œuf (distincte de l'EIP)
     float rho_aedes    <- 0.02;     // Transmission verticale du virus (TOT)
 
     float kappa_culex  <- 0.5;
@@ -118,7 +135,25 @@ global {
     float Emax_culex   <- 300.0;
 
     int   max_vecteurs <- 5000;
-    int   longevite_max_vecteur <- 60;  // borne de sécurité, pas le mécanisme dominant
+
+    // ---- Survie et longévité mesurées à Barkédji (Ba et al. 2005, J Med Entomol)
+    // Ae. vexans     : 94 % par la parité, 91-96 % par capture-marquage-recapture
+    // Cx. poicilipes : 94 % par la parité, 70-79 % par capture-marquage-recapture
+    // On retient la PARITÉ pour les deux espèces : c'est l'estimateur usuel de
+    // la capacité vectorielle, et la CMR sous-estime la survie (l'émigration
+    // hors de la zone de recapture est comptée comme une mortalité). Le R0 est
+    // très sensible à ce choix via le terme p^n : avec 0.77 pour Culex, moins
+    // de 2 % des femelles survivent à l'EIP et la transmission devient nulle.
+    float survie_aedes <- 0.94;
+    float survie_culex <- 0.94;
+    int   longevite_max_aedes <- 26;   // âge maximal calculé, Ba et al. 2005
+    int   longevite_max_culex <- 15;
+
+    // ---- Dispersion maximale depuis le gîte (Ba et al. 2005), en MÈTRES.
+    // Le shapefile est en WGS84 mais GAMA le reprojette en UTM métrique
+    // (vérifiable : unite_z3 est journalisé à l'init, ~32 000 m).
+    float portee_vol_aedes_m <- 620.0;
+    float portee_vol_culex_m <- 550.0;
 
     // =========================================================================
     // MOBILITÉ PASTORALE

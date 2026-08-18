@@ -114,16 +114,111 @@ comme `parameter` dans les expériences GUI (catégorie **Fonctionnalités** pou
 | Paramètre | Rôle |
 |---|---|
 | `type_experience` | `"Aedes"` ou `"Animal"` — où démarre le cas index |
-| `utiliser_ndwi_binaire` | Active un masque d'eau binaire pour forcer l'assèchement des mares hors zone d'eau (désactivé par défaut, shapefile requis — voir §6) |
+| `utiliser_ndwi_binaire` | Active un masque d'eau binaire pour forcer l'assèchement des mares hors zone d'eau (désactivé par défaut, shapefile requis — voir §7) |
 | `export_detail` | Active/désactive l'écriture des CSV détaillés à chaque cycle |
-| `echelle_superindividu` | Nombre d'individus réels représentés par 1 agent (défaut 20) |
+| `echelle_superindividu` | Individus réels par agent **hôte** (défaut 20) |
+| `echelle_si_vecteur` | Individus réels par agent **vecteur** (défaut 500) — voir §6 |
 | `lambda_aedes`, `rho_aedes` | Fécondité et taux de transmission verticale des Aedes |
-| `p_h`, `p_a`, `p_vh`, `p_va` | Probabilités de transmission **par piqûre** (b et c de Ross-Macdonald) |
+| `b_aedes`, `b_culex`, `c_aedes`, `c_culex` | Probabilités de transmission **par piqûre**, par espèce de vecteur (voir §6) |
 | `tau_aedes`, `preference_zoophilie` | Cycle gonotrophique (le taux de piqûre vaut 1/tau) et part des repas pris sur le bétail |
 | `delta_c` | Létalité de l'infection chez l'animal |
 | `max_vecteurs` | Plafond de population vectorielle (limite mémoire/performance) |
 
-## 6. Données (`data/`)
+## 6. Calibration et sources
+
+Les paramètres biologiques sont calés autant que possible sur des études conduites
+**à Barkédji même ou dans le Ferlo**, et à défaut sur la littérature RVF générale. Les valeurs
+propres au site priment sur les valeurs génériques.
+
+### Vecteurs — bioécologie (Barkédji)
+
+| Paramètre | Valeur | Source |
+|---|---|---|
+| Cycle gonotrophique *Ae. vexans* | 4 j | Ba et al. 2005 |
+| Cycle gonotrophique *Cx. poicilipes* | 3 j | Ba et al. 2005 |
+| Survie journalière (parité) | 0,94 pour les deux espèces | Ba et al. 2005 |
+| Longévité maximale | 26 j (*Aedes*) / 15 j (*Culex*) | Ba et al. 2005 |
+| Dispersion maximale depuis le gîte | 620 m (*Aedes*) / 550 m (*Culex*) | Ba et al. 2005 ; Talla et al. 2016 |
+| Développement larvaire | < 10 j (*Aedes*) ; plus lent chez *Culex* | Talla et al. 2016 |
+
+> La survie journalière est le paramètre le plus sensible du R₀, via le terme `p^n`. Ba et al.
+> donnent deux estimateurs : la **parité** (0,94 pour les deux espèces) et la
+> **capture-marquage-recapture** (0,91–0,96 pour *Aedes*, 0,70–0,79 pour *Culex*). Le modèle
+> retient la parité, estimateur usuel de la capacité vectorielle — la CMR sous-estime la survie
+> car l'émigration hors zone de recapture y est comptée comme une mortalité. Avec 0,77 pour
+> *Culex*, moins de 2 % des femelles survivent à l'EIP et la transmission s'annule.
+
+### Vecteurs — compétence (souches et populations sénégalaises)
+
+| Paramètre | *Ae. vexans* | *Cx. poicilipes* | Source |
+|---|---|---|---|
+| `b` — transmission vecteur → hôte / piqûre | 0,23 (mesuré 13,3–33,3 %) | 0,11 (11,1 %) | Diallo et al. 2016 |
+| `c` — transmission hôte → vecteur / piqûre | 0,57 (mesuré 30–85 %) | 0,28 (8,3–46,7 %) | Diallo et al. 2016 |
+| EIP à 28 °C | 10,5 j | 10,5 j | Turell et al. |
+
+### Comportement de piqûre
+
+| Paramètre | Valeur | Source |
+|---|---|---|
+| Préférence zoophile | 0,98 | Diallo et al. 2019 : seuls 1,28 % des repas mixtes impliquaient un humain |
+
+### Hôtes
+
+| Paramètre | Valeur | Source |
+|---|---|---|
+| Incubation (ruminants) | 2 j (12–72 h) | WOAH |
+| Durée d'infection / virémie | 4 j (pic à J2, 3–5 j) | Infections expérimentales agneaux/veaux |
+| Densité par campement | ~67 animaux, ~13 personnes | Ancey et al. 2014 : < 50 bovins + < 50 ovins par campement |
+
+### Échelles super-individus : pourquoi deux valeurs
+
+Un moustique est plusieurs ordres de grandeur plus nombreux qu'un ruminant. Avec une échelle
+commune aux hôtes et aux vecteurs, représenter une densité vectorielle réaliste demanderait des
+millions d'agents : en pratique la population vectorielle butait sur `max_vecteurs`, et le
+rapport `m` du R₀ mesurait ce plafond technique plutôt que la biologie.
+
+Le modèle utilise donc **deux échelles** : `echelle_superindividu` (hôtes) et
+`echelle_si_vecteur` (vecteurs). Le `m` du R₀ est calculé en **individus réels**, en
+repondérant par les deux échelles. Conséquence pratique : vérifier dans
+`controle_memoire.csv` que la colonne `vecteurs` reste nettement sous `max_vecteurs` — sinon
+`m` est de nouveau tronqué et il faut augmenter `echelle_si_vecteur`.
+
+### Non calibré — à traiter avec prudence
+
+- **Transmission verticale (`rho_aedes` = 0,02).** La littérature situe le taux transovarien RVFV
+  entre 0 et 8,5 %, mais **elle n'a jamais été démontrée expérimentalement chez *Ae. vexans***,
+  y compris au Sénégal ; seul *Culex tarsalis* en offre une démonstration préliminaire. Le virus
+  a bien été détecté chez des mâles et femelles capturés sur le terrain, ce qui reste un
+  argument indirect. **C'est le mécanisme central de l'expérience « Aedes » : ses résultats
+  reposent donc sur une hypothèse non confirmée pour cette espèce.**
+- **Capacité de charge larvaire (`Emax_culex`).** Le maximum physiologique de 7 000 ind/m² cité
+  dans la littérature ne régule jamais la population dans ce paysage ; la valeur de travail est
+  choisie pour que la compétition larvaire soit effective, pas sourcée.
+- Les coefficients degrés-jours de `core/biologie_thermique.gaml` sont calés sur les durées
+  ci-dessus à une température de référence, pas ajustés sur des séries expérimentales.
+
+### Références
+
+- Ba Y. et al. (2005). *Aspects of bioecology of two Rift Valley fever virus vectors in Senegal
+  (West Africa): Aedes vexans and Culex poicilipes.* J Med Entomol 42(5):739-750.
+- Diallo D. et al. (2016). *Vector competence of Aedes vexans, Culex poicilipes and Cx.
+  quinquefasciatus from Senegal for West and East African lineages of Rift Valley fever virus.*
+  Parasites & Vectors.
+- Diallo D. et al. (2019). *Host-feeding patterns of Aedes (Aedimorphus) vexans arabiensis, a
+  Rift Valley Fever virus vector in the Ferlo pastoral ecosystem of Senegal.* PLoS One 14(4).
+- Talla C. et al. (2016). *Modelling hotspots of the two dominant Rift Valley fever vectors
+  (Aedes vexans and Culex poicilipes) in Barkédji, Sénégal.* Parasites & Vectors 9:111.
+- Talla C. et al. (2014). *Statistical modeling of the abundance of vectors of West African Rift
+  Valley fever in Barkédji, Senegal.* PLoS One 9(12):e114047.
+- Ancey V. et al. (2014). *How do pastoral families combine livestock herds with other livelihood
+  security means to survive? The case of the Ferlo area in Senegal.* Pastoralism 4:3.
+- Durand B. et al. (2020). *It's risky to wander in September: modelling the epidemic potential
+  of Rift Valley fever in a Sahelian setting.* Epidemics.
+- Cavalerie L. et al. (2019). *Rift Valley fever: an open-source transmission dynamics simulation
+  model.* PLoS One 14(1):e0209929.
+- WOAH — fiche technique et Code sanitaire pour les animaux terrestres, fièvre de la Vallée du Rift.
+
+## 7. Données (`data/`)
 
 Voir [`data/README.md`](data/README.md) pour l'arborescence exacte attendue (rasters/shapefiles
 d'occupation du sol, NDVI, NDWI par saison, sol, végétation, routes, climat).
@@ -137,7 +232,7 @@ La fonctionnalité NDWI binaire (`utiliser_ndwi_binaire`) est câblée dans le c
 tant que `data/occsol/eau_binaire/eau_binaire_z3.shp` n'est pas fourni (voir
 `models/core/donnees_chemins.gaml` et `models/core/initialisation.gaml`, actuellement commentés).
 
-## 7. Sorties (`outputs/`)
+## 8. Sorties (`outputs/`)
 
 Un seul jeu de CSV partagé par toutes les simulations d'un batch (chaque ligne commence par
 `simulation_id`) :
@@ -154,7 +249,7 @@ Un seul jeu de CSV partagé par toutes les simulations d'un batch (chaque ligne 
 | `controle_memoire.csv` | Agents vivants, dont `cohortes` larvaires (contrôle de charge) |
 | `resume.csv` | R₀ moyen et infections totales en fin de simulation |
 
-## 8. Lancer une simulation
+## 9. Lancer une simulation
 
 Ouvrir `models/main.gaml` dans GAMA Desktop et choisir une expérience dans le menu.
 
@@ -166,7 +261,7 @@ gama-headless.bat -batch Batch_Aedes_3rep <chemin>/models/main.gaml
 
 (le mode `-xml` ne sert qu'à valider la compilation ; il ne déroule pas la simulation.)
 
-## 9. Lire le R₀ — et ses limites
+## 10. Lire le R₀ — et ses limites
 
 `R₀ > 1` signifie que la transmission peut s'installer, `R₀ < 1` qu'elle s'éteint. **Rien n'impose
 que R₀ vaille 1** : c'est un seuil, pas une cible. C'est le R *effectif*
@@ -177,15 +272,33 @@ c'est donc une borne haute.
 Comportement attendu et vérifié : R₀ reste très en dessous de 1 en saison sèche (Ceedu), franchit 1
 au passage en saison des pluies (Nduungu), et culmine avec l'abondance vectorielle.
 
-**Limites connues, à calibrer :**
+**État après calibration (run de 75 jours, données réelles) :**
 
-- Le **niveau absolu** de R₀ dépend directement de `m` (vecteurs par hôte). Si la population
-  vectorielle sature `max_vecteurs`, `m` est fixé par un plafond technique et non par la biologie :
-  vérifier `controle_memoire.csv` (colonne `vecteurs`) avant d'interpréter un R₀.
-- La production larvaire est bornée par `Emax_culex` (individus/m² d'eau) appliqué au stock du
-  gîte. C'est le principal levier pour ramener l'abondance vectorielle — et donc R₀ — dans une
-  plage réaliste (la littérature FVR situe R₀ en épizootie plutôt entre 1 et 10).
-- Les paramètres de `core/biologie_thermique.gaml` (degrés-jours) sont des ordres de grandeur
-  plausibles marqués « à calibrer », pas des valeurs sourcées.
+| Fenêtre | Saison | `m` (vect./hôte) | `a` | `p` | `n` (EIP) | R₀ |
+|---|---|---|---|---|---|---|
+| F1–F3 | Ceedu (sèche) | 2,8 → 47 | 0,010 → 0,046 | 0,91 → 0,92 | 7,3 → 10,6 j | 0,000 → 0,067 |
+| F4–F7 | Nduungu (pluies) | 146 → 193 | 0,057 → 0,067 | 0,89 → 0,93 | 10,9 → 11,2 j | **0,18 → 0,39** |
+
+`p` et `n` sont désormais conformes aux valeurs publiées (survie 0,89–0,93 ; EIP ~11 j contre
+10,5 j mesurés à 28 °C), et `m` est déterminé par la biologie et non par un plafond technique.
+
+**Ce qui limite encore le R₀ :** le taux de piqûre `a` plafonne autour de 0,06 alors que sa borne
+physiologique est 1/τ ≈ 0,25–0,33. L'écart vient du **décalage spatial hôtes/vecteurs** : les
+vecteurs émergent aux mares, les hôtes sont aux campements, et la portée de vol documentée
+(620 m pour *Ae. vexans*) ne couvre pas systématiquement cette distance. Comme R₀ ∝ `a²`,
+un `a` quatre fois trop faible divise le R₀ par ~16 : avec un `a` à sa valeur biologique, le R₀
+de saison des pluies serait de l'ordre de 5 à 9.
+
+Ce décalage n'est pas qu'un artefact : la focalité de la FVR autour des mares où le bétail
+s'abreuve est un fait documenté (Talla et al. 2016 : la proximité d'une mare augmente le risque
+d'être en hotspot). Mais le R₀ produit ici est une **moyenne sur toute la zone**, à ne pas
+comparer directement aux R₀ locaux publiés pour le Ferlo. La prochaine étape de calibration est
+le comportement d'abreuvement du bétail (fréquence et durée de présence aux mares).
+
+**Autres points de vigilance :**
+
+- Vérifier dans `controle_memoire.csv` que `vecteurs` reste sous `max_vecteurs` : au dernier run
+  le maximum observé est 4 652 pour un plafond de 5 000, donc encore un peu juste. Augmenter
+  `echelle_si_vecteur` (ou `max_vecteurs`) si la colonne sature.
 - Non modélisé : transmission directe animal→humain (abattage, mise bas — route dominante chez
   l'humain), hétérogénéité du bétail et avortements, immunité inter-annuelle.

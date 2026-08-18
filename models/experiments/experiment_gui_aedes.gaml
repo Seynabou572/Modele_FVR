@@ -11,14 +11,14 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
     parameter "Export CSV détaillé" var: export_detail category: "Fonctionnalités";
 
     parameter "Simulation ID"     var: simulation_id   <- 1;
-    parameter "Nb humains init"   var: nb_humains_init <- 40;
-    parameter "Nb animaux init"   var: nb_animaux_init <- 50;
+    parameter "Nb humains init"   var: nb_humains_init <- 100;
+    parameter "Nb animaux init"   var: nb_animaux_init <- 500;
     parameter "Fécondité Aedes (lambda)" var: lambda_aedes min: 50.0 max: 800.0 step: 10.0;
     parameter "Transmission verticale (rho)" var: rho_aedes min: 0.0 max: 0.2 step: 0.005;
     parameter "Cycle gonotrophique τ (j)" var: tau_aedes min: 2.0 max: 10.0 step: 0.5;
     parameter "Préférence zoophile"       var: preference_zoophilie min: 0.0 max: 1.0 step: 0.05;
-    parameter "Proba v→humain"    var: p_h      min: 0.01 max: 1.0 step: 0.01;
-    parameter "Proba v→animal"    var: p_a      min: 0.01 max: 1.0 step: 0.01;
+    parameter "Transmission Aedes→hôte (b)" var: b_aedes min: 0.01 max: 1.0 step: 0.01;
+    parameter "Transmission hôte→Aedes (c)" var: c_aedes min: 0.01 max: 1.0 step: 0.01;
     parameter "Létalité δ_c"      var: delta_c  min: 0.0 max: 0.1 step: 0.005;
     parameter "Échelle SI"        var: echelle_superindividu min: 1 max: 50 step: 1;
     parameter "Plafond vecteurs"  var: max_vecteurs min: 500 max: 100000 step: 500;

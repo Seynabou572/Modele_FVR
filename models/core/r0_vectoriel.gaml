@@ -14,7 +14,7 @@
  *
  * Par rapport à la version précédente : b et c étaient absents de la formule,
  * `a` ne comptait que les piqûres des vecteurs infectés, et `p` était postulé
- * à exp(-mu_v) alors que la mortalité réellement simulée est plus forte.
+ * à une constante alors que la mortalité réellement simulée est plus forte.
  *
  * R0_animal désigne le R0 « tous vecteurs confondus » (Aedes + Culex) ;
  * R0_Aedes ne considère que les Aedes.
@@ -78,24 +78,28 @@ global {
     /**
      * Composante vectorielle C de Ross-Macdonald, avec garde-fous sur p.
      */
-    float composante_C(float m, float a, float p, float n) {
+    float composante_C(float m, float a, float p, float n, float b, float c) {
         if (m <= 0.0 or a <= 0.0 or p <= 0.0 or p >= 1.0 or n <= 0.0) { return 0.0; }
         float ln_p <- ln(p);
         if (ln_p >= 0.0) { return 0.0; }
-        return (m * a * a * b_moyen * c_moyen * (p ^ n)) / (-ln_p);
+        return (m * a * a * b * c * (p ^ n)) / (-ln_p);
     }
 
     /**
-     * Probabilités de transmission moyennes, pondérées par l'abondance relative
-     * des deux types d'hôtes : le R0 est calculé sur un pool d'hôtes unique.
+     * Probabilités de transmission moyennes. La compétence dépend de l'espèce
+     * de VECTEUR (Diallo et al. 2016) : pour le R0 « tous vecteurs confondus »
+     * on pondère donc par la composition Aedes/Culex de la population.
      */
     action mettre_a_jour_b_c_moyens {
-        float N_h <- float(length(humain));
-        float N_a <- float(length(animal));
-        float N   <- N_h + N_a;
+        float N_ae <- float(length(vecteur where (each.type_vecteur = "aedes")));
+        float N_cx <- float(length(vecteur where (each.type_vecteur = "culex")));
+        float N    <- N_ae + N_cx;
         if (N > 0.0) {
-            b_moyen <- (b_vh * N_h + b_va * N_a) / N;
-            c_moyen <- (c_hv * N_h + c_av * N_a) / N;
+            b_moyen <- (b_aedes * N_ae + b_culex * N_cx) / N;
+            c_moyen <- (c_aedes * N_ae + c_culex * N_cx) / N;
+        } else {
+            b_moyen <- b_aedes;
+            c_moyen <- c_aedes;
         }
     }
 
@@ -129,7 +133,7 @@ global {
                        ? max(0.0, min(0.999, 1.0 - cumul_morts_Aedes / cumul_vecteurs_Aedes_jours))
                        : 0.0;
 
-        C_Aedes_10j  <- composante_C(m_Aedes_10j, a_Aedes_10j, p_Aedes_10j, n_Aedes);
+        C_Aedes_10j  <- composante_C(m_Aedes_10j, a_Aedes_10j, p_Aedes_10j, n_Aedes, b_aedes, c_aedes);
         R0_Aedes_10j <- (r_hote > 0.0) ? (C_Aedes_10j / r_hote) : 0.0;
 
         write "AEDES : m=" + with_precision(m_Aedes_10j, 4)
@@ -147,7 +151,7 @@ global {
                         ? max(0.0, min(0.999, 1.0 - cumul_morts_vect / cumul_vecteurs_vect_jours))
                         : 0.0;
 
-        C_animal_10j  <- composante_C(m_animal_10j, a_animal_10j, p_animal_10j, n_animal);
+        C_animal_10j  <- composante_C(m_animal_10j, a_animal_10j, p_animal_10j, n_animal, b_moyen, c_moyen);
         R0_animal_10j <- (r_hote > 0.0) ? (C_animal_10j / r_hote) : 0.0;
 
         // Conservé pour les moniteurs de l'interface
@@ -203,14 +207,18 @@ global {
     }
 
     reflex accumuler_fenetre_R0 {
-        int nb_h <- length(humain) + length(animal);
-        if (nb_h > 0) {
+        // `m` doit être un rapport d'INDIVIDUS RÉELS : hôtes et vecteurs n'ont
+        // pas la même échelle super-individu, il faut donc repondérer.
+        float nb_h <- float(length(humain) + length(animal)) * float(echelle_superindividu);
+        if (nb_h > 0.0) {
             int nb_aedes <- length(vecteur where (each.type_vecteur = "aedes"));
-            cumul_m_Aedes              <- cumul_m_Aedes + (float(nb_aedes) / float(nb_h));
+            cumul_m_Aedes              <- cumul_m_Aedes
+                + (float(nb_aedes) * float(echelle_si_vecteur) / nb_h);
             cumul_vecteurs_Aedes_jours <- cumul_vecteurs_Aedes_jours + float(nb_aedes);
 
             int nb_tous_v <- length(vecteur);
-            cumul_m_vect              <- cumul_m_vect + (float(nb_tous_v) / float(nb_h));
+            cumul_m_vect              <- cumul_m_vect
+                + (float(nb_tous_v) * float(echelle_si_vecteur) / nb_h);
             cumul_vecteurs_vect_jours <- cumul_vecteurs_vect_jours + float(nb_tous_v);
         }
         cumul_eip        <- cumul_eip + eip_jours(temperature);
