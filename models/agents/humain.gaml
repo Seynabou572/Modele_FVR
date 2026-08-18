@@ -30,22 +30,16 @@ species humain parent: hote {
         point cible <- nil;
         float vit   <- vitesse_hote_normal;
 
-        if (saison = "Nduungu") {
-            list<mare> md <- mare where (each.volume_eau > 0.0);
-            if (!empty(md)) {
-                mare m <- md with_max_of (each.volume_eau / (1.0 + (location distance_to each.location)));
-                derniere_mare <- m;
-                cible <- m.location;
-            }
-        } else if (saison = "Dabbuunde") {
-            if (campement_origine != nil) { cible <- campement_origine.location; }
-        } else {
-            list<mare> md <- mare where (each.volume_eau > Vseuil);
-            if (!empty(md)) {
-                mare m <- md with_max_of (each.volume_eau / (1.0 + (location distance_to each.location)));
-                derniere_mare <- m;
-                cible <- m.location;
-            }
+        // Les mares sont aussi la ressource en eau des familles pastorales : le
+        // puisage est quotidien et se fait à la mare accessible la plus proche.
+        list<mare> md <- mare where (each.volume_eau > Vseuil
+                    and (each.location distance_to location) < distance_abreuvement_max);
+        if (!empty(md)) {
+            mare m <- md closest_to self;
+            derniere_mare <- m;
+            cible <- m.location;
+        } else if (saison = "Dabbuunde" and campement_origine != nil) {
+            cible <- campement_origine.location;
         }
 
         if (cible = nil) {

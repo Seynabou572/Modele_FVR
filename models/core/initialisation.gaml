@@ -73,8 +73,13 @@ global {
 
         vitesse_aedes        <- unite_z3 * 0.0012;   // Ae. vexans : forte dispersion
         vitesse_culex        <- unite_z3 * 0.0006;   // Culex : inféodé au gîte
-        vitesse_hote_normal  <- unite_z3 * 0.0004;
-        vitesse_transhumance <- unite_z3 * 0.006;
+        // Déplacement journalier des hôtes, en mètres (FAO : 6-10 km bovins,
+        // 3-5 km petits ruminants entre pâturage et point d'eau). L'ancien
+        // réglage (unite_z3 * 0.0004 ~ 13 m/jour) rendait le bétail quasi
+        // immobile : il n'atteignait jamais les mares, et le taux de piqûre `a`
+        // s'effondrait faute de rencontre hôte/vecteur.
+        vitesse_hote_normal  <- 6000.0;
+        vitesse_transhumance <- 15000.0;
         rayon_detection_v        <- unite_z3 * 0.0025;
         rayon_piqure_humain      <- unite_z3 * 0.0015;
         rayon_piqure_animal      <- unite_z3 * 0.0018;

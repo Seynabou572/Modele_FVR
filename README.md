@@ -24,6 +24,10 @@ transovarienne) chez *Aedes* : une femelle infectée pond des œufs eux-mêmes i
 en moustiques déjà infectés dès le retour des pluies — c'est ce mécanisme qui permet au virus de
 « redémarrer » chaque saison des pluies sans hôte infecté préexistant.
 
+> **Détail des processus comportementaux** — mécanismes biologiques implémentés, justification
+> bibliographique de chacun et localisation dans le code :
+> [`docs/processus_comportementaux.md`](docs/processus_comportementaux.md).
+
 ## 2. Architecture du projet
 
 ```
@@ -50,6 +54,8 @@ Modele_FVR/
 │       ├── experiment_gui_aedes.gaml   # expérience GUI, cas index = Aedes (EXP A)
 │       ├── experiment_gui_animal.gaml  # expérience GUI, cas index = Animal (EXP B)
 │       └── experiment_batch.gaml       # 4 expériences batch (3 et 1000 répétitions)
+├── docs/
+│   └── processus_comportementaux.md  # mécanismes, sources, renvois au code
 ├── data/                         # données SIG/climat — voir data/README.md
 └── outputs/                      # CSV générés par les simulations (ignorés par git)
 ```
@@ -276,24 +282,29 @@ au passage en saison des pluies (Nduungu), et culmine avec l'abondance vectoriel
 
 | Fenêtre | Saison | `m` (vect./hôte) | `a` | `p` | `n` (EIP) | R₀ |
 |---|---|---|---|---|---|---|
-| F1–F3 | Ceedu (sèche) | 2,8 → 47 | 0,010 → 0,046 | 0,91 → 0,92 | 7,3 → 10,6 j | 0,000 → 0,067 |
-| F4–F7 | Nduungu (pluies) | 146 → 193 | 0,057 → 0,067 | 0,89 → 0,93 | 10,9 → 11,2 j | **0,18 → 0,39** |
+| F1–F2 | Ceedu (sèche) | 2,5 → 9 | 0,031 → 0,084 | 0,88 → 0,93 | 7,2 → 10,7 j | 0,001 → 0,050 |
+| F3–F7 | Nduungu (pluies) | 64 → 191 | 0,061 → 0,073 | 0,88 → 0,93 | 10,7 → 11,3 j | **0,18 → 0,53** |
 
 `p` et `n` sont désormais conformes aux valeurs publiées (survie 0,89–0,93 ; EIP ~11 j contre
 10,5 j mesurés à 28 °C), et `m` est déterminé par la biologie et non par un plafond technique.
 
-**Ce qui limite encore le R₀ :** le taux de piqûre `a` plafonne autour de 0,06 alors que sa borne
-physiologique est 1/τ ≈ 0,25–0,33. L'écart vient du **décalage spatial hôtes/vecteurs** : les
-vecteurs émergent aux mares, les hôtes sont aux campements, et la portée de vol documentée
-(620 m pour *Ae. vexans*) ne couvre pas systématiquement cette distance. Comme R₀ ∝ `a²`,
-un `a` quatre fois trop faible divise le R₀ par ~16 : avec un `a` à sa valeur biologique, le R₀
-de saison des pluies serait de l'ordre de 5 à 9.
+**Ce qui limite encore le R₀ :** le taux de piqûre `a` plafonne autour de 0,07 alors que sa borne
+physiologique est 1/τ ≈ 0,25–0,33. L'ajout de l'abreuvement quotidien (voir
+[`docs/processus_comportementaux.md`](docs/processus_comportementaux.md) §4) a fait passer `a` de
+0,06 à 0,07 et le R₀ de pic de 0,39 à 0,53, mais l'écart n'est pas comblé.
 
-Ce décalage n'est pas qu'un artefact : la focalité de la FVR autour des mares où le bétail
-s'abreuve est un fait documenté (Talla et al. 2016 : la proximité d'une mare augmente le risque
-d'être en hotspot). Mais le R₀ produit ici est une **moyenne sur toute la zone**, à ne pas
-comparer directement aux R₀ locaux publiés pour le Ferlo. La prochaine étape de calibration est
-le comportement d'abreuvement du bétail (fréquence et durée de présence aux mares).
+La raison est structurelle et instructive : **la production vectorielle est répartie sur les
+~250 mares, alors que la présence des hôtes se concentre sur les mares proches des campements.**
+Les vecteurs issus des mares inoccupées ne piquent jamais, ce qui tire la moyenne vers le bas.
+
+Le R₀ produit ici est donc une **moyenne spatiale sur toute la zone**, qu'il ne faut pas comparer
+directement aux R₀ locaux publiés pour le Ferlo — ces derniers sont cartographiés point par point
+(Durand et al. 2020). La focalité de la FVR autour des mares fréquentées par le bétail est
+elle-même un fait documenté (Talla et al. 2016 : la proximité d'une mare augmente le risque d'être
+en hotspot).
+
+**Prochaine étape suggérée :** calculer un R₀ *local*, restreint aux mares effectivement
+fréquentées par les hôtes, pour obtenir une grandeur comparable aux cartes publiées.
 
 **Autres points de vigilance :**
 

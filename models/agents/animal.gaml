@@ -55,14 +55,19 @@ species animal parent: hote {
         point cible <- nil; float vit <- vitesse_hote_normal;
         if (est_transhumant and destination_transhumance != nil) {
             cible <- destination_transhumance.location; vit <- vitesse_transhumance;
-        } else if (saison = "Nduungu") {
-            list<mare> md <- mare where (each.volume_eau > Vseuil);
-            if (!empty(md)) {
-                mare m <- md with_max_of (each.volume_eau / (1.0 + (location distance_to each.location)));
-                mare_actuelle <- m;
-                if !(m in memoire_mares) { add m to: memoire_mares; }
-                cible <- m.location;
-            }
+        } else if (!empty(mare where (each.volume_eau > Vseuil
+                       and (each.location distance_to location) < distance_abreuvement_max))) {
+            // ABREUVEMENT QUOTIDIEN — le bétail sahélien boit tous les jours en
+            // saison chaude et accepte de parcourir plusieurs kilomètres pour le
+            // faire (FAO). Ce passage journalier à la mare, quelle que soit la
+            // saison, est le principal lieu de contact avec les vecteurs, qui y
+            // émergent et y piquent au crépuscule.
+            list<mare> abreuvoirs <- mare where (each.volume_eau > Vseuil
+                       and (each.location distance_to location) < distance_abreuvement_max);
+            mare m <- abreuvoirs closest_to self;
+            mare_actuelle <- m;
+            if !(m in memoire_mares) { add m to: memoire_mares; }
+            cible <- m.location;
         } else if (saison = "Dabbuunde") { cible <- campement_origine.location; }
         else {
             list<vegetation> zones <- vegetation where (each.biomasse > 15.0 and

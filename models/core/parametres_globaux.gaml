@@ -149,6 +149,16 @@ global {
     int   longevite_max_aedes <- 26;   // âge maximal calculé, Ba et al. 2005
     int   longevite_max_culex <- 15;
 
+    // ---- Mobilité des hôtes, en MÈTRES PAR JOUR.
+    // Le bétail sahélien s'abreuve quotidiennement en saison chaude et parcourt
+    // 6-10 km (bovins) ou 3-5 km (petits ruminants) entre l'aire de pâturage et
+    // le point d'eau (FAO). Les campements sont installés à 100 m - 3 km d'une
+    // mare, 80 % entre 1 et 1.5 km du lit du Ferlo (Chevalier et al. 2013,
+    // Int J Health Geogr) : le passage quotidien à la mare est donc bien dans
+    // le rayon de déplacement du troupeau, et c'est lui qui crée l'essentiel du
+    // contact avec les vecteurs, qui émergent et piquent aux mares.
+    float distance_abreuvement_max <- 6000.0;
+
     // ---- Dispersion maximale depuis le gîte (Ba et al. 2005), en MÈTRES.
     // Le shapefile est en WGS84 mais GAMA le reprojette en UTM métrique
     // (vérifiable : unite_z3 est journalisé à l'init, ~32 000 m).
