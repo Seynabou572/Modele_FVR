@@ -35,7 +35,7 @@ global {
     file VEGETATION_SHP  <- file("../../data/vegetation/type_vegetation_z3.shp");
     file ROUTE_SHP       <- file("../../data/routes/chemin_z3.shp");
     file CLIMAT_CSV      <- file("../../data/climat/Climat_2025.csv");
-    file EAU_BINAIRE_SHP <- file("../../data/occsol/eau_binaire/eau_binaire_z3.shp");
+    //file EAU_BINAIRE_SHP <- file("../../data/occsol/eau_binaire/eau_binaire_z3.shp");
 
     // =========================================================================
     // MONDE ET GÉOMÉTRIE

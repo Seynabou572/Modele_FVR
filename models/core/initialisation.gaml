@@ -94,11 +94,13 @@ global {
         ask sol        { do calculer_proprietes_sol; }
         ask vegetation { do calculer_capacite_vegetation; }
 
-        if (utiliser_ndwi_binaire) {
-            create zone_eau_binaire from: EAU_BINAIRE_SHP with: [eau :: int(read(colonne_ndwi_binaire))];
-            zones_eau_binaire <- (zone_eau_binaire where (each.eau = 1)) collect each.shape;
-            write "NDWI binaire : " + length(zones_eau_binaire) + " zones d'eau chargées.";
-        }
+        // NDWI binaire désactivé : EAU_BINAIRE_SHP (donnees_chemins.gaml) est commenté
+        // tant que data/occsol/eau_binaire/eau_binaire_z3.shp n'est pas fourni.
+        // if (utiliser_ndwi_binaire) {
+        //     create zone_eau_binaire from: EAU_BINAIRE_SHP with: [eau :: int(read(colonne_ndwi_binaire))];
+        //     zones_eau_binaire <- (zone_eau_binaire where (each.eau = 1)) collect each.shape;
+        //     write "NDWI binaire : " + length(zones_eau_binaire) + " zones d'eau chargées.";
+        // }
 
         saison <- calculer_saison(jour_debut_simulation);
         do mettre_a_jour_occsol_saisonnier(saison);
