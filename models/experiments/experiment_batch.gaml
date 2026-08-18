@@ -6,6 +6,8 @@
  */
 model ExperimentBatch
 
+import "../core/initialisation.gaml"
+
 experiment "Batch_Aedes_3rep" type: batch repeat: 3 keep_seed: false until: cycle >= duree_simulation - 1 {
     parameter "Expérience"    var: type_experience <- "Aedes";
     parameter "Simulation ID" var: simulation_id   among: [1, 2, 3];

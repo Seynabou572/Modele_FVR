@@ -7,18 +7,27 @@
  */
 model ExportsCsv
 
+import "parametres_globaux.gaml"
+import "climat.gaml"
+import "r0_vectoriel.gaml"
+import "../environnement/mare.gaml"
+import "../environnement/cohorte_larvaire.gaml"
+import "../agents/humain.gaml"
+import "../agents/animal.gaml"
+import "../agents/vecteur.gaml"
+
 global {
 
-    string csv_journalier       <- "../../outputs/journalier.csv";
-    string csv_populations      <- "../../outputs/populations.csv";
-    string csv_r0_vectoriel     <- "../../outputs/r0_vectoriel.csv";
-    string csv_r0_animal        <- "../../outputs/r0_animal.csv";
-    string csv_incidence        <- "../../outputs/incidence.csv";
-    string csv_climat           <- "../../outputs/climat.csv";
-    string csv_mares            <- "../../outputs/mares.csv";
-    string csv_moustiques       <- "../../outputs/moustiques.csv";
-    string csv_controle_memoire <- "../../outputs/controle_memoire.csv";
-    string csv_resume           <- "../../outputs/resume.csv";
+    string csv_journalier       <- "../outputs/journalier.csv";
+    string csv_populations      <- "../outputs/populations.csv";
+    string csv_r0_vectoriel     <- "../outputs/r0_vectoriel.csv";
+    string csv_r0_animal        <- "../outputs/r0_animal.csv";
+    string csv_incidence        <- "../outputs/incidence.csv";
+    string csv_climat           <- "../outputs/climat.csv";
+    string csv_mares            <- "../outputs/mares.csv";
+    string csv_moustiques       <- "../outputs/moustiques.csv";
+    string csv_controle_memoire <- "../outputs/controle_memoire.csv";
+    string csv_resume           <- "../outputs/resume.csv";
 
     bool export_detail  <- true;
 
@@ -36,11 +45,11 @@ global {
                 to: csv_incidence format: "csv" rewrite: true;
             save ["simulation_id","cycle","YEAR","DOY","T2M","RH2M","PRECTOTCORR","WS2M"]
                 to: csv_climat format: "csv" rewrite: true;
-            save ["simulation_id","cycle","nb_mares_actives","volume_moyen","niveau_moyen","oeufs_infectes","ndwi_moyen","ndvi_moyen"]
+            save ["simulation_id","cycle","nb_mares_actives","volume_moyen","niveau_moyen","oeufs_infectes","oeufs_sains","larves_total","ndwi_moyen","ndvi_moyen"]
                 to: csv_mares format: "csv" rewrite: true;
             save ["simulation_id","cycle","aedes_S","aedes_E","aedes_I","culex_S","culex_E","culex_I","total"]
                 to: csv_moustiques format: "csv" rewrite: true;
-            save ["simulation_id","cycle","humains","animaux","vecteurs","total_agents"]
+            save ["simulation_id","cycle","humains","animaux","vecteurs","cohortes","total_agents"]
                 to: csv_controle_memoire format: "csv" rewrite: true;
             save ["simulation_id","experience","infections_totales",
                   "R0_Aedes_moyen","nb_fenetres_Aedes",
@@ -83,8 +92,12 @@ global {
         int   nb_act    <- length(mare where (each.volume_eau > 0));
         float vol_moy   <- (empty(mare)) ? 0.0 : mean(mare collect each.volume_eau);
         float niv_moy   <- (empty(mare)) ? 0.0 : mean(mare collect each.niveau_mare);
-        int   oeufs_inf <- sum(mare collect each.oeufs_aedes_infectes);
-        save [simulation_id, cycle, nb_act, with_precision(vol_moy, 2), with_precision(niv_moy, 3), oeufs_inf,
+        int   oeufs_inf <- int(sum(mare collect each.oeufs_aedes_infectes));
+        int   oeufs_san <- int(sum(mare collect each.oeufs_aedes_sains));
+        int   larves    <- empty(cohorte_larvaire)
+                           ? 0 : int(sum(cohorte_larvaire collect each.effectif));
+        save [simulation_id, cycle, nb_act, with_precision(vol_moy, 2), with_precision(niv_moy, 3),
+              oeufs_inf, oeufs_san, larves,
               with_precision(ndwi_moyen_global, 4), with_precision(ndvi_moyen_global, 4)]
             to: csv_mares format: "csv" rewrite: false;
     }
@@ -103,7 +116,8 @@ global {
 
     reflex export_memoire when: export_detail {
         save [simulation_id, cycle, length(humain), length(animal), length(vecteur),
-              length(humain) + length(animal) + length(vecteur)]
+              length(cohorte_larvaire),
+              length(humain) + length(animal) + length(vecteur) + length(cohorte_larvaire)]
             to: csv_controle_memoire format: "csv" rewrite: false;
     }
 

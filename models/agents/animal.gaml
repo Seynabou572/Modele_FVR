@@ -4,6 +4,15 @@
  */
 model Animal
 
+import "../core/parametres_globaux.gaml"
+import "../core/climat.gaml"
+import "../environnement/mare.gaml"
+import "../environnement/campement.gaml"
+import "../environnement/vegetation.gaml"
+import "hote.gaml"
+import "humain.gaml"
+import "vecteur.gaml"
+
 species animal parent: hote {
     string etat_sante      <- "S";
     int    jours_dans_etat <- 0;

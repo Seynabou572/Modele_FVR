@@ -1,3 +1,6 @@
 # Sorties de simulation générées (voir models/core/exports_csv.gaml)
 outputs/*.csv
 !outputs/.gitkeep
+
+# Exports de moniteurs générés par GAMA lors des runs GUI
+models/monitors/

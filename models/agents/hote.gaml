@@ -5,6 +5,10 @@
  */
 model Hote
 
+import "../core/parametres_globaux.gaml"
+import "../core/donnees_chemins.gaml"
+import "../environnement/route.gaml"
+
 species hote skills: [moving] {
     list<route> chemin_parcouru <- [];
     point cible_exploration <- nil;

@@ -5,6 +5,15 @@
  */
 model DynamiquePopulation
 
+import "parametres_globaux.gaml"
+import "climat.gaml"
+import "../environnement/mare.gaml"
+import "../environnement/vegetation.gaml"
+import "../environnement/campement.gaml"
+import "../agents/humain.gaml"
+import "../agents/animal.gaml"
+import "../agents/vecteur.gaml"
+
 global {
 
     reflex mise_a_jour_compartiments {
@@ -50,21 +59,17 @@ global {
         }
     }
 
-    reflex naissances_vecteurs {
+    /**
+     * Recrutement de fond des Culex (gîtes non cartographiés, immigration).
+     * Il passe désormais par le stade aquatique, comme toute autre production
+     * de vecteurs : plus aucun adulte n'apparaît spontanément sans délai de
+     * développement.
+     */
+    reflex recrutement_de_fond_culex {
         ask mare where (each.volume_eau > 0.0) {
             float prob <- min(1.0, B_v / 1000.0);
-            if (flip(prob) and length(vecteur) < max_vecteurs) {
-                create vecteur {
-                    type_vecteur     <- "culex";
-                    etat_sante       <- "S";
-                    taille_groupe    <- echelle_superindividu;
-                    vitesse          <- vitesse_culex;
-                    mare_origine     <- myself;
-                    location         <- myself.location + {rnd(-30.0, 30.0), rnd(-30.0, 30.0)};
-                    age              <- 0; jours_dans_etat <- 0;
-                    est_cas_index_A  <- false; est_cas_index_B <- false;
-                    origine_infection <- "aucune";
-                }
+            if (flip(prob)) {
+                do creer_cohorte("culex", false, float(echelle_superindividu), false);
             }
         }
     }

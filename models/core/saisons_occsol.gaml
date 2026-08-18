@@ -5,6 +5,13 @@
  */
 model SaisonsOccsol
 
+import "parametres_globaux.gaml"
+import "donnees_chemins.gaml"
+import "../environnement/occsol_polygone.gaml"
+import "../environnement/mare.gaml"
+import "../environnement/campement.gaml"
+import "../environnement/cohorte_larvaire.gaml"
+
 global {
 
     string calculer_saison(int jour) {
@@ -108,6 +115,7 @@ global {
         }
 
         list<geometry> mares_restantes <- copy(parties_mares);
+        ask mare { appariee <- false; }
         ask mare {
             if (!empty(mares_restantes)) {
                 geometry plus_proche <- mares_restantes with_min_of (each distance_to location);
@@ -117,6 +125,7 @@ global {
                     surface_max <- area(plus_proche);
                     volume_eau  <- surface_max * 0.30;
                     surface_eau <- min(surface_max, volume_eau * 2.0);
+                    appariee    <- true;
                     remove plus_proche from: mares_restantes;
                 }
             }
@@ -126,7 +135,32 @@ global {
                 surface_max <- area(shape);
                 volume_eau  <- surface_max * 0.30;
                 surface_eau <- min(surface_max, volume_eau * 2.0);
+                appariee    <- true;
             }
+        }
+
+        // Retrait des mares orphelines : sans cela les mares s'accumulaient
+        // d'une saison à l'autre (elles n'étaient jamais détruites), ce qui
+        // faisait dériver à la hausse le nombre de gîtes larvaires.
+        // Le stock d'œufs quiescents est transféré à la mare survivante la plus
+        // proche pour ne pas détruire le réservoir inter-saisonnier.
+        list<mare> survivantes <- mare where each.appariee;
+        list<mare> orphelines  <- mare where !each.appariee;
+        if (!empty(orphelines)) {
+            ask orphelines {
+                if (!empty(survivantes)) {
+                    mare refuge <- survivantes closest_to self;
+                    if (refuge != nil) {
+                        refuge.oeufs_aedes_infectes <- refuge.oeufs_aedes_infectes + oeufs_aedes_infectes;
+                        refuge.oeufs_aedes_sains    <- refuge.oeufs_aedes_sains + oeufs_aedes_sains;
+                        if (oeufs_index) { refuge.oeufs_index <- true; }
+                    }
+                }
+                ask (cohorte_larvaire where (each.gite = self)) { do die; }
+                do die;
+            }
+            write "Mares retirées (non appariées) : " + length(orphelines)
+                + " — œufs quiescents transférés.";
         }
 
         list<geometry> camps_restants <- copy(parties_camps);

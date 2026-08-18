@@ -4,6 +4,12 @@
  */
 model Vegetation
 
+import "../core/parametres_globaux.gaml"
+import "../core/climat.gaml"
+import "../core/saisons_occsol.gaml"
+import "../agents/humain.gaml"
+import "../agents/animal.gaml"
+
 species vegetation {
     int    formcode;
     string formation;

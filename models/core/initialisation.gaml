@@ -6,6 +6,27 @@
  */
 model Initialisation
 
+import "parametres_globaux.gaml"
+import "donnees_chemins.gaml"
+import "climat.gaml"
+import "biologie_thermique.gaml"
+import "saisons_occsol.gaml"
+import "dynamique_population.gaml"
+import "r0_vectoriel.gaml"
+import "exports_csv.gaml"
+import "../environnement/occsol_polygone.gaml"
+import "../environnement/zone_eau_binaire.gaml"
+import "../environnement/sol.gaml"
+import "../environnement/vegetation.gaml"
+import "../environnement/route.gaml"
+import "../environnement/campement.gaml"
+import "../environnement/mare.gaml"
+import "../environnement/cohorte_larvaire.gaml"
+import "../agents/hote.gaml"
+import "../agents/humain.gaml"
+import "../agents/animal.gaml"
+import "../agents/vecteur.gaml"
+
 global {
 
     // =========================================================================
@@ -50,8 +71,8 @@ global {
 
         unite_z3 <- min(zone_z3.width, zone_z3.height);
 
-        vitesse_aedes        <- unite_z3 * 0.0006;
-        vitesse_culex        <- unite_z3 * 0.0012;
+        vitesse_aedes        <- unite_z3 * 0.0012;   // Ae. vexans : forte dispersion
+        vitesse_culex        <- unite_z3 * 0.0006;   // Culex : inféodé au gîte
         vitesse_hote_normal  <- unite_z3 * 0.0004;
         vitesse_transhumance <- unite_z3 * 0.006;
         rayon_detection_v        <- unite_z3 * 0.0025;
@@ -59,23 +80,30 @@ global {
         rayon_piqure_animal      <- unite_z3 * 0.0018;
         rayon_depot_oeufs        <- unite_z3 * 0.0012;
         rayon_recherche_paturage <- unite_z3 * 0.05;
+        // Portée du vol de quête nocturne (Ae. vexans : plusieurs km ; Culex : ~500 m)
+        rayon_recherche_hote_aedes <- unite_z3 * 0.06;
+        rayon_recherche_hote_culex <- unite_z3 * 0.015;
 
+        // Seul r est un paramètre fixe du R0. La survie journalière p est
+        // désormais MESURÉE sur chaque fenêtre (morts biologiques / vecteurs-jours)
+        // et n (EIP) est la moyenne de eip_jours(T) sur la fenêtre : voir
+        // core/r0_vectoriel.gaml. Les valeurs ci-dessous ne servent que d'amorce
+        // avant la première fenêtre.
+        r_hote           <- (duree_infection > 0.0) ? 1.0 / duree_infection : 0.0;
         p_survie_vect    <- exp(-mu_v);
-        ln_p_survie_vect <- (p_survie_vect > 0.0 and p_survie_vect < 1.0) ? ln(p_survie_vect) : -9999.0;
-        n_Aedes  <- duree_cycle_extrinseque;
-        n_animal <- duree_cycle_extrinseque;
-        r_hote   <- (duree_infection > 0.0) ? 1.0 / duree_infection : 0.0;
-
-        write "Paramètres R₀ fixes :";
-        write "  p = exp(-mu_v) = exp(-" + with_precision(mu_v, 5) + ") = "
-            + with_precision(p_survie_vect, 6);
-        write "  ln(p) = " + with_precision(ln_p_survie_vect, 6);
-        write "  n_Aedes = " + n_Aedes + " j";
-        write "  n_animal = " + n_animal + " j";
-        write "  r = 1/duree_infection = 1/" + duree_infection + " = "
-            + with_precision(r_hote, 4);
+        ln_p_survie_vect <- ln(p_survie_vect);
+        n_Aedes          <- duree_cycle_extrinseque;
+        n_animal         <- duree_cycle_extrinseque;
 
         do charger_climat;
+
+        write "Paramètres R0 :";
+        write "  r = 1/duree_infection = " + with_precision(r_hote, 4);
+        write "  a attendu ~ 1/tau = " + with_precision(1.0 / cycle_gonotrophique(temperature), 4)
+            + " piqûre/vecteur/jour à " + with_precision(temperature, 1) + " °C";
+        write "  n (EIP) à " + with_precision(temperature, 1) + " °C = "
+            + with_precision(eip_jours(temperature), 2) + " j";
+        write "  p et n seront réestimés à chaque fenêtre de 10 jours.";
 
         create route from: ROUTE_SHP with: [
             code_route   :: int(read("CODE")),
@@ -105,10 +133,10 @@ global {
         saison <- calculer_saison(jour_debut_simulation);
         do mettre_a_jour_occsol_saisonnier(saison);
 
-        beta_vh <- p_h  * sigma_v;
-        beta_va <- p_a  * sigma_v;
-        beta_hv <- p_vh * sigma_v;
-        beta_av <- p_va * sigma_v;
+        b_vh <- p_h;
+        b_va <- p_a;
+        c_hv <- p_vh;
+        c_av <- p_va;
 
         nb_agents_humains <- nb_humains_init;
         nb_agents_animaux <- nb_animaux_init;

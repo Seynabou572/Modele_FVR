@@ -29,19 +29,21 @@ en moustiques déjà infectés dès le retour des pluies — c'est ce mécanisme
 ```
 Modele_FVR/
 ├── models/
-│   ├── Model_FVR.gaml            # point d'entrée : assemble tous les modules ci-dessous
+│   ├── main.gaml                 # point d'entrée : assemble tous les modules ci-dessous
 │   ├── core/                     # logique globale (pas d'agents spatiaux)
 │   │   ├── donnees_chemins.gaml      # chemins vers data/, géométrie du monde (shape, zone_z3)
 │   │   ├── parametres_globaux.gaml   # tous les paramètres/constantes (déclarations pures)
 │   │   ├── climat.gaml               # chargement du CSV climat + reflex journalier + facteurs
+│   │   ├── biologie_thermique.gaml   # durées dépendantes de T (EIP, larves, cycle gonotrophique)
 │   │   ├── saisons_occsol.gaml       # calendrier des 3 saisons, (re)génération mares/campements
-│   │   ├── dynamique_population.gaml # agrégation SEIR, naissances animaux/vecteurs
+│   │   ├── dynamique_population.gaml # agrégation SEIR, naissances animaux, recrutement Culex
 │   │   ├── r0_vectoriel.gaml         # calcul du R₀ (Ross-Macdonald) par fenêtre de 10 jours
 │   │   ├── exports_csv.gaml          # chemins des CSV de sortie + tous les reflex d'export
 │   │   └── initialisation.gaml       # le bloc init : orchestre tout le bootstrap
 │   ├── environnement/            # espèces non mobiles (paysage)
 │   │   ├── occsol_polygone.gaml, zone_eau_binaire.gaml, sol.gaml,
 │   │   │   vegetation.gaml, route.gaml, campement.gaml, mare.gaml
+│   │   └── cohorte_larvaire.gaml     # stade aquatique avec délai de développement
 │   ├── agents/                   # espèces mobiles
 │   │   ├── hote.gaml (parent commun humain/animal), humain.gaml, animal.gaml, vecteur.gaml
 │   └── experiments/
@@ -53,8 +55,16 @@ Modele_FVR/
 ```
 
 Chaque fichier `.gaml` sous `models/` déclare son propre `model <Nom>` (obligatoire en GAML pour
-qu'un fichier soit importable) ; c'est `Model_FVR.gaml` qui les assemble via des `import "...";`
-en un seul modèle `ModeleFVRBarkedjiZ3`.
+qu'un fichier soit importable) **et déclare ses propres `import`**. C'est ce qui permet d'ouvrir
+n'importe quel fichier seul dans l'éditeur GAMA sans erreur de variable non résolue ; GAML tolère
+les imports croisés (mare ↔ vecteur, humain ↔ animal). `main.gaml` reste le point d'entrée qui
+assemble le tout en un seul modèle `ModeleFVRBarkedjiZ3`.
+
+> **Attention aux chemins relatifs.** GAMA ne les résout pas de la même façon selon le sens :
+> la **lecture** (`file("...")`) est relative au fichier qui déclare le chemin
+> (`models/core/` → `../../data/`), tandis que l'**écriture** (`save ... to:`) est relative au
+> fichier d'entrée (`models/main.gaml` → `../outputs/`). Déplacer `main.gaml` casserait les
+> chemins de sortie.
 
 ## 3. Déroulement d'une simulation
 
@@ -108,7 +118,8 @@ comme `parameter` dans les expériences GUI (catégorie **Fonctionnalités** pou
 | `export_detail` | Active/désactive l'écriture des CSV détaillés à chaque cycle |
 | `echelle_superindividu` | Nombre d'individus réels représentés par 1 agent (défaut 20) |
 | `lambda_aedes`, `rho_aedes` | Fécondité et taux de transmission verticale des Aedes |
-| `sigma_v`, `p_h`, `p_a`, `p_vh`, `p_va` | Probabilités de piqûre et de transmission par contact |
+| `p_h`, `p_a`, `p_vh`, `p_va` | Probabilités de transmission **par piqûre** (b et c de Ross-Macdonald) |
+| `tau_aedes`, `preference_zoophilie` | Cycle gonotrophique (le taux de piqûre vaut 1/tau) et part des repas pris sur le bétail |
 | `delta_c` | Létalité de l'infection chez l'animal |
 | `max_vecteurs` | Plafond de population vectorielle (limite mémoire/performance) |
 
@@ -135,18 +146,46 @@ Un seul jeu de CSV partagé par toutes les simulations d'un batch (chaque ligne 
 |---|---|
 | `journalier.csv` | Climat et saison par jour |
 | `populations.csv` | Effectifs SEIR humains/animaux + total vecteurs |
-| `r0_vectoriel.csv` | R₀ Aedes et R₀ tous-vecteurs par fenêtre de 10 jours |
+| `r0_vectoriel.csv` | Par fenêtre de 10 j : `m`, `a`, `p`, `C`, `R0` (Aedes et tous vecteurs), plus `b_moyen`, `c_moyen`, `n_eip` |
 | `incidence.csv` | Nouvelles infections et prévalence hôtes/vecteurs |
 | `climat.csv` | Variables climatiques brutes (T2M, RH2M, PRECTOTCORR, WS2M) |
-| `mares.csv` | Nombre de mares actives, volume/niveau moyen, œufs infectés |
+| `mares.csv` | Mares actives, volume/niveau moyen, œufs quiescents (infectés/sains), `larves_total` |
 | `moustiques.csv` | SEI détaillé par type de vecteur (Aedes/Culex) |
-| `controle_memoire.csv` | Nombre d'agents vivants (contrôle de charge) |
+| `controle_memoire.csv` | Agents vivants, dont `cohortes` larvaires (contrôle de charge) |
 | `resume.csv` | R₀ moyen et infections totales en fin de simulation |
 
 ## 8. Lancer une simulation
 
-Ouvrir `models/Model_FVR.gaml` dans GAMA Desktop et choisir une expérience dans le menu. La
-compilation du modèle a été validée avec les données réelles via `gama-headless.bat -xml` pour
-les 3 types d'expérience ; l'exécution complète est à confirmer visuellement dans GAMA Desktop
-(le runner headless générique de cette installation n'a pas produit de sortie exploitable lors
-des tests en CLI).
+Ouvrir `models/main.gaml` dans GAMA Desktop et choisir une expérience dans le menu.
+
+En ligne de commande, le mode `-batch` fonctionne et produit bien les CSV :
+
+```bash
+gama-headless.bat -batch Batch_Aedes_3rep <chemin>/models/main.gaml
+```
+
+(le mode `-xml` ne sert qu'à valider la compilation ; il ne déroule pas la simulation.)
+
+## 9. Lire le R₀ — et ses limites
+
+`R₀ > 1` signifie que la transmission peut s'installer, `R₀ < 1` qu'elle s'éteint. **Rien n'impose
+que R₀ vaille 1** : c'est un seuil, pas une cible. C'est le R *effectif*
+(`Rₑ = R₀ × fraction de susceptibles`) qui tend vers 1 à l'équilibre endémique. Le R₀ calculé ici
+est un **potentiel de transmission à abondance vectorielle donnée**, sans correction d'immunité :
+c'est donc une borne haute.
+
+Comportement attendu et vérifié : R₀ reste très en dessous de 1 en saison sèche (Ceedu), franchit 1
+au passage en saison des pluies (Nduungu), et culmine avec l'abondance vectorielle.
+
+**Limites connues, à calibrer :**
+
+- Le **niveau absolu** de R₀ dépend directement de `m` (vecteurs par hôte). Si la population
+  vectorielle sature `max_vecteurs`, `m` est fixé par un plafond technique et non par la biologie :
+  vérifier `controle_memoire.csv` (colonne `vecteurs`) avant d'interpréter un R₀.
+- La production larvaire est bornée par `Emax_culex` (individus/m² d'eau) appliqué au stock du
+  gîte. C'est le principal levier pour ramener l'abondance vectorielle — et donc R₀ — dans une
+  plage réaliste (la littérature FVR situe R₀ en épizootie plutôt entre 1 et 10).
+- Les paramètres de `core/biologie_thermique.gaml` (degrés-jours) sont des ordres de grandeur
+  plausibles marqués « à calibrer », pas des valeurs sourcées.
+- Non modélisé : transmission directe animal→humain (abattage, mise bas — route dominante chez
+  l'humain), hétérogénéité du bétail et avortements, immunité inter-annuelle.

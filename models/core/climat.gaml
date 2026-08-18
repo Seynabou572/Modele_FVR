@@ -4,6 +4,9 @@
  */
 model Climat
 
+import "parametres_globaux.gaml"
+import "donnees_chemins.gaml"
+
 global {
 
     float temperature       <- 28.0;
