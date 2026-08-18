@@ -1,0 +1,3 @@
+# Sorties de simulation générées (voir models/core/exports_csv.gaml)
+outputs/*.csv
+!outputs/.gitkeep
