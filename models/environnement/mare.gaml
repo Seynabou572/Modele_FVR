@@ -46,10 +46,80 @@ species mare {
     float Kr           <- 0.5;
     bool  est_ensemble1 <- true;
 
+    float niveau_precedent <- 0.0;
+    float montee_niveau    <- 0.0;
+
     float ndwi_local      <- 0.2;
     float ndwi_precedent  <- 0.2;
 
     bool  appariee <- false;   // transitoire : appariement au changement de saison
+
+    // =========================================================================
+    // ACCUMULATEURS DU R0 LOCAL (fenêtre de 10 jours)
+    // Le R0 global est une moyenne sur toute la zone : il mélange les mares
+    // fréquentées par le bétail et celles qui ne le sont pas, ce qui écrase le
+    // signal. Les R0 publiés pour le Ferlo sont au contraire cartographiés
+    // point par point. On accumule donc ici, par gîte, de quoi calculer un R0
+    // local comparable à ces cartes.
+    // =========================================================================
+    float loc_vect_jours   <- 0.0;   // vecteurs-jours issus de ce gîte
+    float loc_aedes_jours  <- 0.0;   // dont Aedes (pour la composition b/c)
+    float loc_bites        <- 0.0;   // piqûres prises par ces vecteurs
+    float loc_morts        <- 0.0;   // morts biologiques de ces vecteurs
+    float loc_hotes_jours  <- 0.0;   // hôtes-jours présents dans le rayon de vol
+    int   loc_jours        <- 0;
+
+    float R0_local     <- 0.0;
+    float m_local      <- 0.0;
+    float a_local      <- 0.0;
+    float p_local      <- 0.0;
+    float hotes_moyens <- 0.0;
+
+    /**
+     * Hôtes présents dans le rayon de vol des vecteurs du gîte. C'est la
+     * population réellement exposée aux moustiques issus de cette mare.
+     */
+    reflex comptabiliser_hotes_local {
+        int nb <- length(animal at_distance portee_vol_aedes_m)
+                + length(humain at_distance portee_vol_aedes_m);
+        loc_hotes_jours <- loc_hotes_jours + float(nb);
+        loc_jours       <- loc_jours + 1;
+    }
+
+    /**
+     * R0 de Ross-Macdonald restreint à ce gîte et à sa population d'hôtes.
+     * Renvoie 0 si le gîte n'a produit aucun vecteur ou n'a aucun hôte à portée.
+     */
+    action calculer_R0_local {
+        hotes_moyens <- (loc_jours > 0) ? (loc_hotes_jours / float(loc_jours)) : 0.0;
+        float hotes_reels <- hotes_moyens * float(echelle_superindividu);
+
+        if (loc_vect_jours <= 0.0 or hotes_reels <= 0.0 or loc_jours = 0) {
+            m_local <- 0.0; a_local <- 0.0; p_local <- 0.0; R0_local <- 0.0;
+        } else {
+            float vect_reels <- (loc_vect_jours / float(loc_jours)) * float(echelle_si_vecteur);
+            m_local <- vect_reels / hotes_reels;
+            a_local <- loc_bites / loc_vect_jours;
+            p_local <- max(0.0, min(0.999, 1.0 - loc_morts / loc_vect_jours));
+
+            // Compétence pondérée par la composition Aedes/Culex du gîte
+            float part_ae <- loc_aedes_jours / loc_vect_jours;
+            float b_loc <- b_aedes * part_ae + b_culex * (1.0 - part_ae);
+            float c_loc <- c_aedes * part_ae + c_culex * (1.0 - part_ae);
+
+            float C_loc <- world.composante_C(m_local, a_local, p_local, n_animal, b_loc, c_loc);
+            R0_local <- (r_hote > 0.0) ? (C_loc / r_hote) : 0.0;
+        }
+    }
+
+    action reinitialiser_accumulateurs_locaux {
+        loc_vect_jours  <- 0.0;
+        loc_aedes_jours <- 0.0;
+        loc_bites       <- 0.0;
+        loc_morts       <- 0.0;
+        loc_hotes_jours <- 0.0;
+        loc_jours       <- 0;
+    }
 
     reflex mise_a_jour_ndwi when: (cycle mod 3 = 0) {
         ndwi_precedent <- ndwi_local;
@@ -97,8 +167,12 @@ species mare {
     }
 
     reflex mise_a_jour_niveau {
+        niveau_precedent <- niveau_mare;
         niveau_mare <- max(0.0, min(1.0,
             (volume_max_reference > 0) ? volume_eau / volume_max_reference : 0.0));
+        // La MONTÉE du plan d'eau submerge la berge où les œufs ont été pondus :
+        // c'est elle qui déclenche l'éclosion, pas la météo.
+        montee_niveau <- max(0.0, niveau_mare - niveau_precedent);
     }
 
     /**
@@ -116,14 +190,23 @@ species mare {
      * Éclosion Aedes : déclenchée par la remise en eau, à condition que les
      * œufs aient subi une période sèche d'au moins Td_aedes jours.
      */
+    /**
+     * ÉCLOSION AEDES — déclenchée par la SUBMERSION de la berge portant les œufs.
+     *
+     * Le mécanisme réel est : ponte sur la marge exondée -> le plan d'eau
+     * remonte -> les œufs sont noyés -> éclosion synchrone. L'ancienne condition
+     * exigeait 7 jours de sécheresse météorologique achevée juste avant la
+     * pluie : en pleine saison des pluies un tel épisode sec ne se produit
+     * jamais, donc l'éclosion cessait et les œufs s'accumulaient sans éclore
+     * (2,5 millions en fin de run) pendant que les adultes s'éteignaient.
+     */
     reflex eclosion_aedes
         when: volume_eau > 0.0
-          and duree_secheresse_prec >= int(Td_aedes)
-          and (pluie >= 10.0 or pluie_cumulee >= seuil_eclosion_cumulee)
+          and montee_niveau >= seuil_montee_eclosion
           and (oeufs_aedes_infectes + oeufs_aedes_sains) >= 1.0 {
 
-        float frac_surf <- (surface_max > 0) ? min(1.0, surface_eau / surface_max) : 0.0;
-        float taux      <- beta_aedes * frac_surf;
+        // La fraction d'œufs noyés croît avec l'ampleur de la montée.
+        float taux <- beta_aedes * min(1.0, montee_niveau / seuil_montee_eclosion);
 
         float ecl_inf <- oeufs_aedes_infectes * taux;
         float ecl_san <- oeufs_aedes_sains    * taux;

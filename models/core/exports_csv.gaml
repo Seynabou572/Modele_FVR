@@ -21,7 +21,7 @@ global {
     string csv_journalier       <- "../outputs/journalier.csv";
     string csv_populations      <- "../outputs/populations.csv";
     string csv_r0_vectoriel     <- "../outputs/r0_vectoriel.csv";
-    string csv_r0_animal        <- "../outputs/r0_animal.csv";
+    string csv_r0_local         <- "../outputs/r0_local.csv";
     string csv_incidence        <- "../outputs/incidence.csv";
     string csv_climat           <- "../outputs/climat.csv";
     string csv_mares            <- "../outputs/mares.csv";

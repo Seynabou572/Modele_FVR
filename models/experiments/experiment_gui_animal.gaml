@@ -72,6 +72,15 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
             }
         }
 
+        display "R₀ local (par gîte)" type: 2d {
+            chart "R₀ mare par mare" type: series background: #white axes: #black {
+                data "R0 local médian" value: R0_local_median color: #teal;
+                data "R0 local max"    value: R0_local_max    color: #crimson;
+                data "R0 global (zone)" value: R0_animal_10j  color: #darkorange;
+                data "Seuil=1"         value: 1.0             color: #red;
+            }
+        }
+
         display "Climat" type: 2d {
             chart "Pluie"     type: series background: #white size: {0.5,0.5} position: {0.0,0.0} axes: #black { data "Pluie" value: pluie color: #cyan; }
             chart "Temp"      type: series background: #white size: {0.5,0.5} position: {0.5,0.0} axes: #black { data "T°C" value: temperature color: #red; }
@@ -100,6 +109,12 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
         monitor "a_animal"        value: with_precision(a_animal_10j, 4);
         monitor "C_animal"        value: with_precision(C_animal_10j, 4);
         monitor "Fenêtre"         value: num_fenetre;
+
+        monitor "Gîtes évalués"   value: nb_mares_evaluees;
+        monitor "R0 local médian" value: with_precision(R0_local_median, 4) color: #teal;
+        monitor "R0 local max"    value: with_precision(R0_local_max, 4) color: #crimson;
+        monitor "Gîtes R0>1"      value: nb_mares_R0_sup1 color: #crimson;
+        monitor "Part gîtes R0>1" value: with_precision(part_mares_R0_sup1 * 100.0, 1);
 
         monitor "Humains S"       value: int(S_h_global) color: #green;
         monitor "Humains E"       value: int(E_h_global) color: #goldenrod;

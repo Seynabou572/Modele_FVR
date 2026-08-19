@@ -54,7 +54,12 @@ global {
     // population reste en pratique bornée par `max_vecteurs`. Le rapport
     // vecteurs/hôte `m` du R0 est donc calculé en INDIVIDUS RÉELS, en
     // repondérant par les deux échelles (voir core/r0_vectoriel.gaml).
-    int echelle_si_vecteur <- 500;
+    // Relevé à 2 000 : à 500, la population de Culex saturait `max_vecteurs`
+    // dès le cycle 30. Or `action emerger` (cohorte_larvaire.gaml) crée les
+    // adultes sous condition `length(vecteur) < max_vecteurs` : une fois le
+    // plafond atteint, PLUS AUCUN Aedes ne pouvait émerger. Le plafond ne
+    // bornait donc pas seulement `m`, il éliminait l'espèce la moins abondante.
+    int echelle_si_vecteur <- 2000;
     // Densité d'hôtes calée sur la structure pastorale du Ferlo (Ancey et al.
     // 2014, Pastoralism) : un campement héberge typiquement moins de 50 bovins
     // et 50 ovins, soit ~100 têtes. Avec 150 campements et une échelle de 20
@@ -120,6 +125,13 @@ global {
                                     //  compatible avec la survie inter-saisonnière réelle)
     float survie_larvaire_aedes <- 0.85;  // Survie journalière des stades aquatiques Aedes
     float Td_aedes     <- 7.0;      // Durée minimale de sécheresse avant éclosion
+    // Niveau de remplissage au-dessus duquel il ne reste plus de bande exondée
+    // où pondre. En dessous, la quantité pondue est proportionnelle à la
+    // fraction de berge découverte (1 - niveau_mare).
+    float seuil_niveau_ponte_aedes <- 0.95;
+    // Montée du plan d'eau (en fraction de niveau) qui submerge la berge et
+    // déclenche l'éclosion des œufs quiescents qui y ont été pondus.
+    float seuil_montee_eclosion <- 0.05;
     float rho_aedes    <- 0.02;     // Transmission verticale du virus (TOT)
 
     float kappa_culex  <- 0.5;

@@ -75,6 +75,67 @@ global {
     float somme_R0_animal <- 0.0;
     int   nb_R0_animal    <- 0;
 
+    // ---- R0 LOCAL (par gîte) ----
+    // Le R0 global mélange les mares fréquentées par le bétail et celles qui ne
+    // le sont pas : il écrase le signal. Les R0 publiés pour le Ferlo sont
+    // cartographiés point par point ; ces indicateurs-ci sont l'équivalent.
+    int   nb_mares_evaluees   <- 0;   // gîtes produisant des vecteurs ET ayant des hôtes à portée
+    int   nb_mares_R0_sup1    <- 0;
+    float part_mares_R0_sup1  <- 0.0;
+    float R0_local_median     <- 0.0;
+    float R0_local_max        <- 0.0;
+    float R0_local_moyen      <- 0.0;
+
+    /**
+     * Calcule le R0 de chaque gîte, en agrège la distribution, et exporte le
+     * détail par mare (une ligne par gîte évalué) pour permettre une carte.
+     */
+    action calculer_et_exporter_R0_local(int fenetre, int j_debut, int j_fin) {
+        ask mare { do calculer_R0_local; }
+
+        list<mare> evaluees <- mare where (each.R0_local > 0.0 or
+                                  (each.loc_vect_jours > 0.0 and each.hotes_moyens > 0.0));
+        nb_mares_evaluees <- length(evaluees);
+
+        if (nb_mares_evaluees > 0) {
+            list<float> valeurs <- evaluees collect each.R0_local;
+            R0_local_median  <- median(valeurs);
+            R0_local_max     <- max(valeurs);
+            R0_local_moyen   <- mean(valeurs);
+            nb_mares_R0_sup1 <- length(evaluees where (each.R0_local > 1.0));
+            part_mares_R0_sup1 <- float(nb_mares_R0_sup1) / float(nb_mares_evaluees);
+        } else {
+            R0_local_median <- 0.0; R0_local_max <- 0.0; R0_local_moyen <- 0.0;
+            nb_mares_R0_sup1 <- 0;  part_mares_R0_sup1 <- 0.0;
+        }
+
+        write "LOCAL : " + nb_mares_evaluees + " gîtes évalués | R0 médian="
+            + with_precision(R0_local_median, 3)
+            + " | max=" + with_precision(R0_local_max, 3)
+            + " | gîtes R0>1 : " + nb_mares_R0_sup1
+            + " (" + with_precision(part_mares_R0_sup1 * 100.0, 1) + " %)";
+
+        if (export_detail) {
+            if (simulation_id = 1 and fenetre = 1) {
+                save ["simulation_id","experience","fenetre","jour_debut","jour_fin",
+                      "mare","x","y","m_local","a_local","p_local","R0_local",
+                      "hotes_moyens","vecteurs_jours","saison"]
+                    to: csv_r0_local format: "csv" rewrite: true;
+            }
+            ask evaluees {
+                save [simulation_id, type_experience, fenetre, j_debut, j_fin,
+                      name, with_precision(location.x, 1), with_precision(location.y, 1),
+                      with_precision(m_local, 4), with_precision(a_local, 4),
+                      with_precision(p_local, 4), with_precision(R0_local, 4),
+                      with_precision(hotes_moyens, 2), with_precision(loc_vect_jours, 1),
+                      saison]
+                    to: csv_r0_local format: "csv" rewrite: false;
+            }
+        }
+
+        ask mare { do reinitialiser_accumulateurs_locaux; }
+    }
+
     /**
      * Composante vectorielle C de Ross-Macdonald, avec garde-fous sur p.
      */
@@ -178,6 +239,7 @@ global {
                   "m_Aedes","a_Aedes","p_Aedes","C_Aedes","R0_Aedes",
                   "m_animal","a_animal","p_animal","C_animal","R0_animal",
                   "b_moyen","c_moyen","n_eip",
+                  "nb_gites_evalues","R0_local_median","R0_local_max","part_gites_R0_sup1",
                   "saison","temperature_C","pluie_mm","humidite_pct"]
                 to: csv_r0_vectoriel format: "csv" rewrite: true;
         }
@@ -190,9 +252,13 @@ global {
               with_precision(C_animal_10j, 6),  with_precision(R0_animal_10j, 6),
               with_precision(b_moyen, 6),       with_precision(c_moyen, 6),
               with_precision(n_Aedes, 4),
+              nb_mares_evaluees, with_precision(R0_local_median, 6),
+              with_precision(R0_local_max, 6), with_precision(part_mares_R0_sup1, 4),
               saison, with_precision(temperature, 2),
               with_precision(pluie, 2), with_precision(humidite_relative, 2)]
             to: csv_r0_vectoriel format: "csv" rewrite: false;
+
+        do calculer_et_exporter_R0_local(num_fenetre, j_debut, j_fin);
 
         cumul_m_Aedes              <- 0.0;
         cumul_bites_Aedes          <- 0.0;

@@ -69,68 +69,100 @@ species vecteur {
         if (!(zone_z3 covers location)) { location <- zone_z3.centroid; }
     }
 
+    /**
+     * REPAS DE SANG — un agent vecteur représente `taille_groupe` moustiques
+     * réels, un agent hôte `echelle_superindividu` animaux. Les piqûres du
+     * groupe sont donc RÉPARTIES sur les hôtes à portée, et la probabilité
+     * d'infection d'un hôte tient compte du nombre de piqûres qu'il reçoit :
+     *
+     *     piqures_par_individu = (piqures_recues / echelle_superindividu)
+     *     p_eff = 1 - (1 - b) ^ piqures_par_individu
+     *
+     * Sans cette correction, 500 moustiques infectieux face à 20 animaux ne
+     * produisaient qu'un seul tirage à b = 0,11 : la force d'infection était
+     * sous-estimée d'un ordre de grandeur et aucune épidémie ne démarrait.
+     * La formule est exacte lorsque les deux échelles valent 1.
+     */
     reflex repas_sang {
         float tau_j  <- world.cycle_gonotrophique(temperature, type_vecteur);
         float a_jour <- min(1.0, (1.0 / tau_j) * facteur_humidite * facteur_vent);
 
         if (flip(a_jour)) {
-            // Vol de quête nocturne : la femelle cherche activement un hôte dans
-            // sa portée de vol, elle n'attend pas qu'un hôte passe à quelques
-            // dizaines de mètres du gîte. Sans cela les rencontres hôte/vecteur
-            // sont quasi nulles et le taux de piqûre `a` s'effondre à zéro.
+            // Vol de quête : la femelle cherche activement un hôte dans sa
+            // portée de vol documentée (Ba et al. 2005).
             float portee <- (type_vecteur = "aedes")
                             ? portee_vol_aedes_m : portee_vol_culex_m;
             list<animal> a_pr <- animal at_distance portee;
             list<humain> h_pr <- humain at_distance portee;
 
             if (!empty(a_pr) or !empty(h_pr)) {
-                // La piqûre est comptabilisée pour TOUS les vecteurs.
+                // `a` est un taux PAR MOUSTIQUE : chaque moustique du groupe
+                // prend un repas, donc +1 par activation d'agent.
                 if (type_vecteur = "aedes") { cumul_bites_Aedes <- cumul_bites_Aedes + 1.0; }
                 cumul_bites_vect <- cumul_bites_vect + 1.0;
+                if (mare_origine != nil and !dead(mare_origine)) {
+                    mare_origine.loc_bites <- mare_origine.loc_bites + 1.0;
+                }
 
-                bool sur_animal <- !empty(a_pr)
-                                   and (empty(h_pr) or flip(preference_zoophilie));
+                // Répartition zoophile des piqûres du groupe entre bétail et humains
+                float part_animal <- empty(a_pr) ? 0.0
+                                     : (empty(h_pr) ? 1.0 : preference_zoophilie);
+                float piqures_animal <- float(taille_groupe) * part_animal;
+                float piqures_humain <- float(taille_groupe) - piqures_animal;
 
-                float p_trans <- b_vecteur();   // pré-calculé : dans `ask`, le
-                float p_infec <- c_vecteur();   // contexte est l'hôte, pas le vecteur
+                float p_trans <- b_vecteur();
+                float p_infec <- c_vecteur();
 
-                if (sur_animal) {
-                    animal cible <- one_of(a_pr);
-                    location <- cible.location;   // la femelle rejoint son hôte
-                    if (etat_sante = "I") {
-                        ask cible {
-                            if (etat_sante = "S" and flip(p_trans)) {
+                // ---- Vecteur infectieux : il inocule les hôtes qu'il pique ----
+                if (etat_sante = "I") {
+                    if (piqures_animal >= 1.0 and !empty(a_pr)) {
+                        float piq_ind <- (piqures_animal / float(length(a_pr)))
+                                       / float(echelle_superindividu);
+                        float p_eff <- 1.0 - ((1.0 - p_trans) ^ piq_ind);
+                        ask a_pr {
+                            if (etat_sante = "S" and flip(p_eff)) {
                                 etat_sante      <- "E";
                                 jours_dans_etat <- 0;
                                 nb_infections_totales <- nb_infections_totales + echelle_superindividu;
                                 incidence_c           <- incidence_c + echelle_superindividu;
                             }
                         }
-                    } else if (etat_sante = "S" and cible.etat_sante = "I" and flip(p_infec)) {
-                        etat_sante        <- "E";
-                        avancement_eip    <- 0.0;
-                        origine_infection <- "horizontale";
-                        incidence_v       <- incidence_v + echelle_si_vecteur;
                     }
-                } else {
-                    humain cible <- one_of(h_pr);
-                    location <- cible.location;   // la femelle rejoint son hôte
-                    if (etat_sante = "I") {
-                        ask cible {
-                            if (etat_sante = "S" and flip(p_trans)) {
+                    if (piqures_humain >= 1.0 and !empty(h_pr)) {
+                        float piq_ind <- (piqures_humain / float(length(h_pr)))
+                                       / float(echelle_superindividu);
+                        float p_eff <- 1.0 - ((1.0 - p_trans) ^ piq_ind);
+                        ask h_pr {
+                            if (etat_sante = "S" and flip(p_eff)) {
                                 etat_sante      <- "E";
                                 jours_dans_etat <- 0;
                                 nb_infections_totales <- nb_infections_totales + echelle_superindividu;
                                 incidence_c           <- incidence_c + echelle_superindividu;
                             }
                         }
-                    } else if (etat_sante = "S" and cible.etat_sante = "I" and flip(p_infec)) {
+                    }
+                }
+                // ---- Vecteur sain : il peut s'infecter sur un hôte virémique ----
+                else if (etat_sante = "S") {
+                    // Fraction des piqûres du groupe qui tombent sur un hôte I
+                    float f_an <- empty(a_pr) ? 0.0
+                        : (float(length(a_pr where (each.etat_sante = "I"))) / float(length(a_pr)));
+                    float f_hu <- empty(h_pr) ? 0.0
+                        : (float(length(h_pr where (each.etat_sante = "I"))) / float(length(h_pr)));
+                    float part_hu <- 1.0 - part_animal;
+                    float p_agent <- p_infec * (part_animal * f_an + part_hu * f_hu);
+
+                    if (p_agent > 0.0 and flip(min(1.0, p_agent))) {
                         etat_sante        <- "E";
                         avancement_eip    <- 0.0;
                         origine_infection <- "horizontale";
                         incidence_v       <- incidence_v + echelle_si_vecteur;
                     }
                 }
+
+                // La femelle finit sa nuit sur l'un des hôtes visités
+                if (!empty(a_pr) and part_animal > 0.0) { location <- one_of(a_pr).location; }
+                else if (!empty(h_pr)) { location <- one_of(h_pr).location; }
             }
         }
     }
@@ -151,6 +183,19 @@ species vecteur {
     reflex vieillir_dans_etat { jours_dans_etat <- jours_dans_etat + 1; }
 
     /**
+     * Comptabilise la présence du jour au crédit du gîte d'origine : c'est la
+     * base du R0 local, calculé mare par mare (voir mare.gaml).
+     */
+    reflex comptabiliser_gite {
+        if (mare_origine != nil and !dead(mare_origine)) {
+            mare_origine.loc_vect_jours <- mare_origine.loc_vect_jours + 1.0;
+            if (type_vecteur = "aedes") {
+                mare_origine.loc_aedes_jours <- mare_origine.loc_aedes_jours + 1.0;
+            }
+        }
+    }
+
+    /**
      * Ponte Aedes sur mare ASSÉCHÉE : le fait d'être infectée ne conditionne
      * plus la ponte elle-même (auparavant seules les femelles I pondaient, ce
      * qui rendait la population d'Aedes non auto-entretenue), mais seulement la
@@ -160,10 +205,16 @@ species vecteur {
         when: type_vecteur = "aedes"
           and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
         mare m <- mare closest_to self;
+        // Ae. vexans pond sur le SOL HUMIDE EXONDÉ en bordure de mare, pas sur
+        // sol totalement sec ni sur l'eau libre. L'ancienne condition exigeait
+        // `volume_eau = 0`, jamais vraie dès la mise en eau : la ponte devenait
+        // impossible toute la saison des pluies et l'espèce s'éteignait.
+        // La bande exondée disponible est proportionnelle à (1 - niveau_mare).
         if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
-            and m.volume_eau = 0) {
+            and m.niveau_mare < seuil_niveau_ponte_aedes) {
+            float marge  <- max(0.0, 1.0 - m.niveau_mare);
             float pontes <- lambda_aedes * kappa_aedes * facteur_temperature
-                          * facteur_humidite * float(taille_groupe);
+                          * facteur_humidite * float(taille_groupe) * marge;
             float infectes <- (etat_sante = "I") ? pontes * rho_aedes : 0.0;
 
             // Le cas index doit amorcer le réservoir même si rho est très faible.
@@ -204,10 +255,18 @@ species vecteur {
             // journalière `p` utilisée dans le R0.
             cumul_morts_vect <- cumul_morts_vect + 1.0;
             if (type_vecteur = "aedes") { cumul_morts_Aedes <- cumul_morts_Aedes + 1.0; }
+            if (mare_origine != nil and !dead(mare_origine)) {
+                mare_origine.loc_morts <- mare_origine.loc_morts + 1.0;
+            }
             do die;
         }
-        // Purge de performance au plafond : artefact, NON comptée dans p.
-        if (!dead(self) and length(vecteur) > max_vecteurs and flip(0.2)) { do die; }
+        // Purge de performance au plafond : artefact de calcul, NON comptée dans
+        // `p`. Intensité proportionnelle au dépassement, et appliquée sans
+        // distinction d'espèce pour ne pas éliminer la moins abondante.
+        if (!dead(self) and length(vecteur) > max_vecteurs) {
+            float exces <- float(length(vecteur) - max_vecteurs) / float(max_vecteurs);
+            if (flip(min(0.5, exces))) { do die; }
+        }
     }
 
     aspect default {

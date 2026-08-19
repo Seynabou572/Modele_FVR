@@ -62,8 +62,13 @@ species cohorte_larvaire {
         int   nb_agents <- int(nb_exact);
         if (flip(nb_exact - nb_agents)) { nb_agents <- nb_agents + 1; }
 
+        // Pas de blocage au plafond ici : `action emerger` étant appelée cohorte
+        // par cohorte, un refus « premier arrivé, premier servi » élimine
+        // l'espèce la moins abondante (les Aedes, noyés sous les Culex). La
+        // régulation est confiée à la purge de `reflex mourir`, qui est aveugle
+        // à l'espèce. Une borne large reste pour éviter tout emballement.
         loop rep from: 0 to: nb_agents - 1 {
-            if (length(vecteur) < max_vecteurs) {
+            if (length(vecteur) < max_vecteurs * 2) {
                 create vecteur {
                     type_vecteur      <- myself.type_vecteur;
                     etat_sante        <- myself.infectee ? "I" : "S";
