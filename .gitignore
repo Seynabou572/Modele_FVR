@@ -4,3 +4,6 @@ outputs/*.csv
 
 # Exports de moniteurs générés par GAMA lors des runs GUI
 models/monitors/
+data/occsol/shp/occsol_2025_*
+data/occsol/ndvi/*_2025.tif
+data/occsol/ndwi/*_2025.tif

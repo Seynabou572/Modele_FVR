@@ -18,16 +18,16 @@ import "../agents/vecteur.gaml"
 
 global {
 
-    string csv_journalier       <- "../outputs/journalier.csv";
-    string csv_populations      <- "../outputs/populations.csv";
-    string csv_r0_vectoriel     <- "../outputs/r0_vectoriel.csv";
-    string csv_r0_animal        <- "../outputs/r0_animal.csv";
-    string csv_incidence        <- "../outputs/incidence.csv";
-    string csv_climat           <- "../outputs/climat.csv";
-    string csv_mares            <- "../outputs/mares.csv";
-    string csv_moustiques       <- "../outputs/moustiques.csv";
-    string csv_controle_memoire <- "../outputs/controle_memoire.csv";
-    string csv_resume           <- "../outputs/resume.csv";
+    string csv_journalier       <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/journalier.csv";
+    string csv_populations      <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/populations.csv";
+    string csv_r0_vectoriel     <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/r0_vectoriel.csv";
+    string csv_r0_animal        <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/r0_animal.csv";
+    string csv_incidence        <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/incidence.csv";
+    string csv_climat           <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/climat.csv";
+    string csv_mares            <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/mares.csv";
+    string csv_moustiques       <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/moustiques.csv";
+    string csv_controle_memoire <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/controle_memoire.csv";
+    string csv_resume           <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/resume.csv";
 
     bool export_detail  <- true;
 

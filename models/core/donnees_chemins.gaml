@@ -10,31 +10,31 @@ global {
     // FICHIERS DE DONNÉES SAISONNIÈRES
     // =========================================================================
     map<string, file> occsol_raster_saisons <- [
-        "Ceedu"     :: file("../../data/occsol/raster/raster_z3_Ceedu.tif"),
-        "Nduungu"   :: file("../../data/occsol/raster/raster_z3.tif"),
-        "Dabbuunde" :: file("../../data/occsol/raster/raster_z3_Debbundu.tif")
+        "Ceedu"     :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/raster/raster_Ceedu_2025.tif"),
+        "Nduungu"   :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/raster/raster_Nduungu_2025.tif"),
+        "Dabbuunde" :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/raster/raster_Debbundu.tif")
     ];
     map<string, file> occsol_shp_saisons <- [
-        "Ceedu"     :: file("../../data/occsol/shp/occsol_z3_Ceedu2025.shp"),
-        "Nduungu"   :: file("../../data/occsol/shp/occsol_z3_Nduungu2025.shp"),
-        "Dabbuunde" :: file("../../data/occsol/shp/occsol_z3_Dabbuunde2025.shp")
+        "Ceedu"     :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/shp/occsol_2025_Ceedu_barkedji_vecteur.shp"),
+        "Nduungu"   :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/shp/occsol_2025_Nduungu_barkedji_vecteur.shp"),
+        "Dabbuunde" :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/shp/occsol_2025_Dabbuunde_barkedji_vecteu.shp")
     ];
     map<string, file> ndvi_raster_saisons <- [
-        "Ceedu"     :: file("../../data/occsol/ndvi/NDVI_z3_Ceedu.tif"),
-        "Nduungu"   :: file("../../data/occsol/ndvi/NDVI_z3_Nduungu.tif"),
-        "Dabbuunde" :: file("../../data/occsol/ndvi/NDVI_z3_Dabbuunde.tif")
+        "Ceedu"     :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/ndvi/NDVI_Ceedu_2025.tif"),
+        "Nduungu"   :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/ndvi/NDVI_Nduungu_2025.tif"),
+        "Dabbuunde" :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/ndvi/NDVI_Dabbuunde_2025.tif")
     ];
     map<string, file> ndwi_raster_saisons <- [
-        "Ceedu"     :: file("../../data/occsol/ndwi/NDWI_z3_Ceedu.tif"),
-        "Nduungu"   :: file("../../data/occsol/ndwi/NDWI_z3_Nduungu.tif"),
-        "Dabbuunde" :: file("../../data/occsol/ndwi/NDWI_z3_Dabbuunde.tif")
+        "Ceedu"     :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/ndwi/NDWI_Ceedu_2025.tif"),
+        "Nduungu"   :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/ndwi/NDWI_Nduungu_2025.tif"),
+        "Dabbuunde" :: file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/ndwi/NDWI_Dabbuunde_2025.tif")
     ];
 
-    file OCCSOL_SHP      <- file("../../data/occsol/shp/occsol_z3_Ceedu2025.shp");
-    file SOL_SHP         <- file("../../data/sol/type_sol_z3.shp");
-    file VEGETATION_SHP  <- file("../../data/vegetation/type_vegetation_z3.shp");
-    file ROUTE_SHP       <- file("../../data/routes/chemin_z3.shp");
-    file CLIMAT_CSV      <- file("../../data/climat/Climat_2025.csv");
+    file OCCSOL_SHP      <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/shp/occsol_2025_Ceedu_barkedji_vecteur.shp");
+    file SOL_SHP         <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/sol/TYPE DE SOL.shp");
+    file VEGETATION_SHP  <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/vegetation/TYPE DE VEGETAION.shp");
+    file ROUTE_SHP       <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/routes/chemin.shp");
+    file CLIMAT_CSV      <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/climat/Climat_2025.csv");
     //file EAU_BINAIRE_SHP <- file("../../data/occsol/eau_binaire/eau_binaire_z3.shp");
 
     // =========================================================================

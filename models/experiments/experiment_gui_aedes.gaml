@@ -95,6 +95,7 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
             }
         }
 
+
         display "Climat" type: 2d {
             chart "Pluie"     type: series background: #white size: {0.5,0.5} position: {0.0,0.0} axes: #black { data "Pluie" value: pluie color: #cyan; }
             chart "Temp"      type: series background: #white size: {0.5,0.5} position: {0.5,0.0} axes: #black { data "T°C" value: temperature color: #red; }

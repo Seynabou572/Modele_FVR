@@ -66,25 +66,31 @@ global {
     }
 
     init {
+    	
+    	// ========== AFFICHAGE DES DIMENSIONS DE LA ZONE ==========
+	    write "=========================================";
+	    write "DIMENSIONS DE LA ZONE D'ÉTUDE (zone_z3)";
+	    write "-----------------------------------------";
+	    write "Largeur (x) : " + zone_z3.width + " m";
+	    write "Hauteur (y) : " + zone_z3.height + " m";
+	    write "Surface totale : " + zone_z3.area + " m² (soit " + (zone_z3.area / 1000000) + " km²)";
+	    write "=========================================";
         write "========== INIT FVR Z3 | Expérience=" + type_experience
             + " | SimID=" + simulation_id + " ==========";
 
         unite_z3 <- min(zone_z3.width, zone_z3.height);
 
-        vitesse_aedes        <- unite_z3 * 0.0012;   // Ae. vexans : forte dispersion
-        vitesse_culex        <- unite_z3 * 0.0006;   // Culex : inféodé au gîte
-        // Déplacement journalier des hôtes, en mètres (FAO : 6-10 km bovins,
-        // 3-5 km petits ruminants entre pâturage et point d'eau). L'ancien
-        // réglage (unite_z3 * 0.0004 ~ 13 m/jour) rendait le bétail quasi
-        // immobile : il n'atteignait jamais les mares, et le taux de piqûre `a`
-        // s'effondrait faute de rencontre hôte/vecteur.
-        vitesse_hote_normal  <- 6000.0;
-        vitesse_transhumance <- 15000.0;
-        rayon_detection_v        <- unite_z3 * 0.0025;
-        rayon_piqure_humain      <- unite_z3 * 0.0015;
-        rayon_piqure_animal      <- unite_z3 * 0.0018;
-        rayon_depot_oeufs        <- unite_z3 * 0.0012;
-        rayon_recherche_paturage <- unite_z3 * 0.05;
+		// ===== NOUVELLES VALEURS CALIBRÉES SUR unite_z3 =====
+		vitesse_aedes        <- unite_z3 * 0.026;   // 800 m/jour (Aedes actif)
+		vitesse_culex        <- unite_z3 * 0.013;   // 400 m/jour (Culex plus sédentaire)
+		vitesse_hote_normal  <- 6000.0;             // 6 km/jour 
+		vitesse_transhumance <- 15000.0;            // 15 km/jour 
+		
+		rayon_detection_v        <- unite_z3 * 0.0065; // 200 m (détection CO2)
+		rayon_piqure_humain      <- unite_z3 * 0.0006; // 20 m
+		rayon_piqure_animal      <- unite_z3 * 0.0006; // 20 m
+		rayon_depot_oeufs        <- unite_z3 * 0.0012; // 37 m 
+		rayon_recherche_paturage <- unite_z3 * 0.05;   // 1500 m 
 
         // Seul r est un paramètre fixe du R0. La survie journalière p est
         // désormais MESURÉE sur chaque fenêtre (morts biologiques / vecteurs-jours)
@@ -98,7 +104,8 @@ global {
         n_animal         <- duree_cycle_extrinseque;
 
         do charger_climat;
-
+		
+		write "Humidite: " + facteur_humidite + " | Vent: " + facteur_vent;
         write "Paramètres R0 :";
         write "  r = 1/duree_infection = " + with_precision(r_hote, 4);
         write "  unite_z3 = " + with_precision(unite_z3, 0)
@@ -229,7 +236,7 @@ global {
             if (!empty(mare)) {
                 mare_seche <- first(mare);
                 mare_seche.volume_eau  <- 0.0;
-                mare_seche.surface_eau <- 0.0;
+                //mare_seche.surface_eau <- 0.0;
 
                 create vecteur {
                     type_vecteur     <- "aedes";

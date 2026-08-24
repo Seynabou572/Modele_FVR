@@ -71,3 +71,4 @@ global {
         facteur_vent <- max(0.1, min(1.0, 1.0 - (vitesse_vent / 10.0)));
     }
 }
+

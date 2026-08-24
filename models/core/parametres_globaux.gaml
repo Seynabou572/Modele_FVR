@@ -54,7 +54,7 @@ global {
     // population reste en pratique bornée par `max_vecteurs`. Le rapport
     // vecteurs/hôte `m` du R0 est donc calculé en INDIVIDUS RÉELS, en
     // repondérant par les deux échelles (voir core/r0_vectoriel.gaml).
-    int echelle_si_vecteur <- 500;
+    int echelle_si_vecteur <- 1000;
     // Densité d'hôtes calée sur la structure pastorale du Ferlo (Ancey et al.
     // 2014, Pastoralism) : un campement héberge typiquement moins de 50 bovins
     // et 50 ovins, soit ~100 têtes. Avec 150 campements et une échelle de 20
@@ -63,8 +63,8 @@ global {
     // campement pour 1-2 ménages). L'ancien réglage (50 et 40 agents) ne
     // représentait que 6.7 animaux par campement, ce qui gonflait
     // artificiellement le rapport vecteurs/hôte `m` du R0.
-    int nb_humains_init <- 100;
-    int nb_animaux_init <- 500;
+    int nb_humains_init <- 600;
+    int nb_animaux_init <- 3000;
     int nb_agents_humains <- 0;
     int nb_agents_animaux <- 0;
     int nb_campements     <- 0;
@@ -106,7 +106,7 @@ global {
     // Virémie expérimentale chez l'agneau/le veau : pic à J2, ~3-5 j au total.
     float duree_infection  <- 4.0;
     // EIP de repli (valeur à 28 °C, Turell et al.) si la température manque.
-    float duree_cycle_extrinseque <- 10.5;
+    float duree_cycle_extrinseque <- 10.0;
 
     // =========================================================================
     // PARAMÈTRES BIOLOGIQUES DES VECTEURS
@@ -120,7 +120,7 @@ global {
                                     //  compatible avec la survie inter-saisonnière réelle)
     float survie_larvaire_aedes <- 0.85;  // Survie journalière des stades aquatiques Aedes
     float Td_aedes     <- 7.0;      // Durée minimale de sécheresse avant éclosion
-    float rho_aedes    <- 0.02;     // Transmission verticale du virus (TOT)
+    float rho_aedes    <- 0.085;     // Transmission verticale du virus (TOT)
 
     float kappa_culex  <- 0.5;
     float lambda_culex <- 150.0;
@@ -162,13 +162,13 @@ global {
     // ---- Dispersion maximale depuis le gîte (Ba et al. 2005), en MÈTRES.
     // Le shapefile est en WGS84 mais GAMA le reprojette en UTM métrique
     // (vérifiable : unite_z3 est journalisé à l'init, ~32 000 m).
-    float portee_vol_aedes_m <- 620.0;
-    float portee_vol_culex_m <- 550.0;
+    float portee_vol_aedes_m <- 2000.0;		//620
+    float portee_vol_culex_m <- 2000.0;		//550
 
     // =========================================================================
     // MOBILITÉ PASTORALE
     // =========================================================================
-    float Vseuil   <- 0.5;
+    float Vseuil   <- 50.0;
     float NECseuil <- 2.5;
 
     // =========================================================================
@@ -191,9 +191,9 @@ global {
     // =========================================================================
     // CALENDRIER
     // =========================================================================
-    int jour_debut_simulation <- 152;
-    int jour_fin_simulation   <- 334;
-    int duree_simulation      <- 183;
+    int jour_debut_simulation <- 182;
+    int jour_fin_simulation   <- 242;
+    int duree_simulation      <- 60;
 
     // =========================================================================
     // COMPARTIMENTS AGRÉGÉS

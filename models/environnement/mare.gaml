@@ -33,7 +33,7 @@ species mare {
 
     // Accumulateur des pontes Culex de la journée (converti en cohorte le soir).
     float pontes_culex_jour    <- 0.0;
-
+    
     int   jours_sans_pluie     <- 0;
     int   duree_secheresse_prec <- 0;      // durée du dernier épisode sec ACHEVÉ
     float volume_max_reference <- 300.0;
@@ -57,10 +57,10 @@ species mare {
     }
 
     reflex mise_a_jour_volume {
-        Iap       <- k_sol * (Iap + pluie);
-        float G_t <- max(0.0, Gmax - Iap);
-        float Pe  <- max(0.0, pluie - G_t);
-        float Qin <- est_ensemble1 ? (Kr * Pe * 1000.0) : 0.0;
+        Iap       <- k_sol * (Iap + pluie);			//mettre à jour l'indice d'accumulation de pluie
+        float G_t <- max(0.0, Gmax - Iap);			//calcule une capacité d'absorption
+        float Pe  <- max(0.0, pluie - G_t);			//calcule la pluie excédentaire qui peut creer des ruissellement
+        float Qin <- est_ensemble1 ? (Kr * Pe * 1000.0) : 0.0;		//calcule ruissellement
 
         float facteur_ndwi <- max(0.4, min(2.5, 1.2 - ndwi_local * 2.0));
         float chute_ndwi   <- max(0.0, ndwi_precedent - ndwi_local);
@@ -163,14 +163,14 @@ species mare {
         pontes_culex_jour <- 0.0;
     }
 
-    action creer_cohorte(string type_v, bool inf, float eff, bool index) {
+    action creer_cohorte(string type_v, bool inf, float eff, bool est_cas_index) {
         create cohorte_larvaire {
             gite            <- myself;
             type_vecteur    <- type_v;
             infectee        <- inf;
             effectif        <- eff;
             avancement      <- 0.0;
-            issue_cas_index <- index;
+            issue_cas_index <- est_cas_index;
             location        <- myself.location;
         }
     }

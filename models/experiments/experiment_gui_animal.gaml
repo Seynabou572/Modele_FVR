@@ -28,6 +28,8 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
     parameter "Capacité larvaire (ind/m² d'eau)" var: Emax_culex min: 10.0 max: 7000.0 step: 10.0;
 
     output {
+    	
+    	
         display "Carte Z3" type: java2D background: #white {
             graphics "fond_occsol" {
                 loop i from: 0 to: length(fond_geoms) - 1 {
@@ -65,10 +67,34 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
                 data "R" value: R_c_global color: #blue;
             }
         }
+
+        display "Vecteurs" type: 2d {
+            chart "Vecteurs" type: series background: #white axes: #black {
+                data "Aedes S" value: length(vecteur where (each.type_vecteur="aedes" and each.etat_sante="S")) * echelle_superindividu color: #pink;
+                data "Aedes I" value: length(vecteur where (each.type_vecteur="aedes" and each.etat_sante="I")) * echelle_superindividu color: #darkred;
+                data "Culex S" value: length(vecteur where (each.type_vecteur="culex" and each.etat_sante="S")) * echelle_superindividu color: #violet;
+                data "Culex I" value: length(vecteur where (each.type_vecteur="culex" and each.etat_sante="I")) * echelle_superindividu color: #darkviolet;
+                data "Aedes vertical I" value: length(vecteur where (each.type_vecteur="aedes" and each.origine_infection="verticale" and each.etat_sante="I")) * echelle_superindividu color: #orangered;
+            }
+        }
+        
         display "R₀ animal (10j)" type: 2d {
             chart "R₀ = C/r" type: series background: #white axes: #black {
                 data "R0_animal" value: R0_animal_10j color: #darkorange;
                 data "Seuil=1"   value: 1.0           color: #red;
+            }
+        }
+                
+        display "Courbes épidémiques" type:2d {
+            chart "Incidence et Prévalence" type: series {
+                // Données pour l'incidence animale (nouveaux cas par jour)
+                data "Incidence journalière (animaux)" value: incidence_c color: #red style: line;
+
+                // Données pour la prévalence animale (proportion d'animaux infectés)
+                data "Prévalence (animaux)" value: prevalence_c color: #blue style: line;
+
+                // Optionnel : Cumul total des infections
+                data "Cumul des infections" value: nb_infections_totales color: #green style: line;
             }
         }
 
