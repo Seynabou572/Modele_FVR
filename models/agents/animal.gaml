@@ -102,13 +102,15 @@ species animal parent: hote {
 
     reflex mortalite_naturelle { if (flip(mu_c)) { do die; } }
 
-    aspect default {
-        rgb couleur;
-        switch etat_sante {
-            match "S" { couleur <- #lightgreen; }  match "E" { couleur <- #orange; }
-            match "I" { couleur <- #red; }          match "R" { couleur <- rgb(147,197,253); }
-            default   { couleur <- #lightgreen; }
-        }
-        draw circle(unite_z3 * 0.009) color: couleur border: couleur;
-    }
+	aspect default {
+	    rgb couleur;
+	    switch etat_sante {
+	        match "S" { couleur <- rgb(255,255,0); }      // JAUNE ← MODIFICATION
+	        match "E" { couleur <- rgb(255,165,0); }      // ORANGE (inchangé)
+	        match "I" { couleur <- rgb(255,0,0); }        // ROUGE (inchangé)
+	        match "R" { couleur <- rgb(128,128,128); }    // GRIS ← MODIFICATION
+	        default   { couleur <- rgb(255,255,0); }      // JAUNE par défaut
+	    }
+	    draw circle(unite_z3 * 0.009) color: couleur border: couleur;
+	}
 }

@@ -73,12 +73,14 @@ species humain parent: hote {
         }
     }
 
-    aspect default {
-        rgb couleur;
-        switch etat_sante {
-            match "S" { couleur <- #green;  } match "E" { couleur <- #yellow; }
-            match "I" { couleur <- #red;    } match "R" { couleur <- #gray;   }
-        }
-        draw square(unite_z3 * 0.012) color: couleur border: couleur;
-    }
+	aspect default {
+	    rgb couleur;
+	    switch etat_sante {
+	        match "S" { couleur <- rgb(255,200,50,0.45); }      
+	        match "E" { couleur <- rgb(255,165,0); }      
+	        match "I" { couleur <- rgb(255,0,0); }        
+	        match "R" { couleur <- rgb(128,128,128); }    
+	    }
+	    draw square(unite_z3 * 0.012) color: couleur border: couleur;
+	}
 }

@@ -214,19 +214,19 @@ species vecteur {
         rgb   c;
         float taille <- unite_z3 * 0.002;
         if (type_vecteur = "aedes") {
-            switch etat_sante {
-                match "S" { c <- #pink; }
-                match "E" { c <- rgb(255,165,0); }
-                match "I" { c <- est_cas_index_A ? #darkred : (origine_infection = "verticale" ? #orangered : #red); }
-            }
-            draw triangle(taille) color: c border: c;
+			switch etat_sante {
+			    match "S" { c <- #pink; }                         // ROSE
+			    match "E" { c <- rgb(255,165,0); }               // ORANGE
+			    match "I" { c <- est_cas_index_A ? #darkred : (origine_infection = "verticale" ? #orangered : #red); }
+			}
+			draw triangle(taille) color: c border: c;
         } else {
-            switch etat_sante {
-                match "S" { c <- #violet; }
-                match "E" { c <- rgb(180,100,220); }
-                match "I" { c <- #darkviolet; }
-            }
-            draw circle(taille) color: c border: c;
+		switch etat_sante {
+		    match "S" { c <- #violet; }                       // VIOLET
+		    match "E" { c <- rgb(180,100,220); }             // VIOLET CLAIR
+		    match "I" { c <- #darkviolet; }                  // VIOLET FONCÉ
+		}
+		draw circle(taille) color: c border: c;
         }
     }
 }

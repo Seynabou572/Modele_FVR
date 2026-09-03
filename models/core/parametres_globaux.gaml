@@ -54,7 +54,7 @@ global {
     // population reste en pratique bornée par `max_vecteurs`. Le rapport
     // vecteurs/hôte `m` du R0 est donc calculé en INDIVIDUS RÉELS, en
     // repondérant par les deux échelles (voir core/r0_vectoriel.gaml).
-    int echelle_si_vecteur <- 1000;
+    int echelle_si_vecteur <- 500;
     // Densité d'hôtes calée sur la structure pastorale du Ferlo (Ancey et al.
     // 2014, Pastoralism) : un campement héberge typiquement moins de 50 bovins
     // et 50 ovins, soit ~100 têtes. Avec 150 campements et une échelle de 20
@@ -63,8 +63,8 @@ global {
     // campement pour 1-2 ménages). L'ancien réglage (50 et 40 agents) ne
     // représentait que 6.7 animaux par campement, ce qui gonflait
     // artificiellement le rapport vecteurs/hôte `m` du R0.
-    int nb_humains_init <- 600;
-    int nb_animaux_init <- 3000;
+    int nb_humains_init <- 500;
+    int nb_animaux_init <- 1000;
     int nb_agents_humains <- 0;
     int nb_agents_animaux <- 0;
     int nb_campements     <- 0;

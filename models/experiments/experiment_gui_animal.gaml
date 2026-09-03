@@ -49,6 +49,8 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
                     color: #black font: font("Times New Roman", 12, #bold);
             }
         }
+        
+
 
         display "SEIR — Humains" type: 2d {
             chart "Humains" type: series background: #white axes: #black {

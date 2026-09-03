@@ -54,11 +54,12 @@ species vegetation {
 
     aspect default {
         rgb couleur;
-        float ratio <- (capacite_max > 0) ? biomasse / capacite_max : 0.0;
-        if      (ratio > 0.7)  { couleur <- rgb(34,139,34,0.55); }
-        else if (ratio > 0.4)  { couleur <- rgb(154,205,50,0.5); }
-        else if (ratio > 0.15) { couleur <- rgb(189,183,107,0.45); }
-        else                   { couleur <- rgb(210,180,140,0.4); }
+        // Utilisation directe du NDVI pour la couleur
+        float ndvi <- ndvi_local;
+        if      (ndvi > 0.35)  { couleur <- rgb(34,139,34,0.55); }   // Vert foncé – forte végétation
+        else if (ndvi > 0.20)  { couleur <- rgb(154,205,50,0.5); }   // Vert clair – végétation moyenne
+        else if (ndvi > 0.05)  { couleur <- rgb(173,255,47,0.45); }   // JAUNE – NDVI faible
+        else                   { couleur <- rgb(210,180,140,0.4); }  // Marron clair – sol nu
         draw shape color: couleur border: couleur;
     }
 }
