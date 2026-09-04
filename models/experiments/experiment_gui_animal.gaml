@@ -104,11 +104,10 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
             }
         }
 
-        monitor "R0_animal (10j)" value: with_precision(R0_animal_10j, 4) color: #darkorange;
+        monitor "R0_animal (J1-10)" value: with_precision(R0_animal_10j, 4) color: #darkorange;
         monitor "m_animal"        value: with_precision(m_animal_10j, 4);
         monitor "a_animal"        value: with_precision(a_animal_10j, 4);
         monitor "C_animal"        value: with_precision(C_animal_10j, 4);
-        monitor "Fenêtre"         value: num_fenetre;
 
         monitor "Gîtes évalués"   value: nb_mares_evaluees;
         monitor "R0 local médian" value: with_precision(R0_local_median, 4) color: #teal;
@@ -130,6 +129,11 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
         monitor "NDWI moyen"      value: with_precision(ndwi_moyen_global, 3) color: #blue;
 
         monitor "Infections totales (cumul)"  value: nb_infections_totales color: #red;
-        monitor "R0_animal moyen (cumul)"     value: (nb_R0_animal > 0) ? with_precision(somme_R0_animal / nb_R0_animal, 4) : 0.0;
+        monitor "Forçage hors enveloppe" value: forcage_hors_enveloppe;
+        monitor "Cumul pluie série mm"   value: with_precision(cumul_pluie_serie, 0);
+        monitor "Aedes (individus)"      value: int(length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur);
+        monitor "Culex (individus)"      value: int(length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur);
+        monitor "Zones avec infection"   value: length(zone_suivi where (each.jour_premiere_infection >= 0));
+        monitor "Campements touchés"     value: length(zone_suivi where (each.type_zone = "campement" and each.jour_premiere_infection >= 0));
     }
 }

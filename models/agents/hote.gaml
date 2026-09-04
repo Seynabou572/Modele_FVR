@@ -13,9 +13,30 @@ species hote skills: [moving] {
     list<route> chemin_parcouru <- [];
     point cible_exploration <- nil;
 
+    /**
+     * CONFINEMENT A L'EMPRISE SIMULEE.
+     *
+     * Le test portait sur `zone_z3`, qui est l'enveloppe d'un FICHIER et
+     * conserve donc les coordonnees de ce fichier (UTM : x de 496 735 a
+     * 528 800), alors que GAMA translate le monde a l'origine (x de 0 a
+     * 32 065). `zone_z3 covers pt` etait donc TOUJOURS FAUX, et chaque agent
+     * etait renvoye a chaque pas sur `zone_z3.centroid` — un point situe hors
+     * de la carte. Les hotes ne bougeaient jamais reellement, n'approchaient
+     * aucun gite, et n'apparaissaient pas a l'ecran.
+     *
+     * On teste desormais sur `shape`, l'emprise du monde, qui est dans le
+     * meme repere que les agents. Et l'on RECADRE sur le bord au lieu de
+     * teleporter au centre : renvoyer un troupeau au milieu de la zone parce
+     * qu'il a franchi une limite est un artefact violent, qui melangeait les
+     * positions a chaque pas.
+     */
     point contraindre(point pt) {
-        if (zone_z3 covers pt) { return pt; }
-        return zone_z3.centroid;
+        if (shape covers pt) { return pt; }
+        float xmin <- shape.location.x - shape.width  / 2;
+        float xmax <- shape.location.x + shape.width  / 2;
+        float ymin <- shape.location.y - shape.height / 2;
+        float ymax <- shape.location.y + shape.height / 2;
+        return {min(xmax, max(xmin, pt.x)), min(ymax, max(ymin, pt.y))};
     }
 
     point explorer_routes {

@@ -48,6 +48,64 @@ species vecteur {
     /** Transmission hôte -> vecteur par piqûre (compétence de l'espèce). */
     float c_vecteur { return (type_vecteur = "aedes") ? c_aedes : c_culex; }
 
+    // -------------------------------------------------------------------
+    // ORDRE DES REFLEX — la ponte est déclarée AVANT le déplacement.
+    // La femelle pond sur le gîte où elle a passé la nuit, puis disperse.
+    // Dans l'ordre inverse (déplacement d'abord), le cas index de l'EXP A
+    // sortait de `rayon_depot_oeufs` avant d'avoir pondu : les deux valent
+    // unite_z3 * 0.0012, donc la marche aléatoire du cycle 0 faisait échouer
+    // l'amorçage du réservoir d'œufs dans environ une réplication sur cinq.
+    // -------------------------------------------------------------------
+
+    /**
+     * Ponte Aedes sur mare ASSÉCHÉE : le fait d'être infectée ne conditionne
+     * plus la ponte elle-même (auparavant seules les femelles I pondaient, ce
+     * qui rendait la population d'Aedes non auto-entretenue), mais seulement la
+     * fraction rho_aedes d'œufs infectés (transmission verticale / TOT).
+     */
+    reflex ponte_aedes
+        when: type_vecteur = "aedes"
+          and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
+        mare m <- mare closest_to self;
+        // Ae. vexans pond sur le SOL HUMIDE EXONDÉ en bordure de mare, pas sur
+        // sol totalement sec ni sur l'eau libre. L'ancienne condition exigeait
+        // `volume_eau = 0`, jamais vraie dès la mise en eau : la ponte devenait
+        // impossible toute la saison des pluies et l'espèce s'éteignait.
+        // La bande exondée disponible est proportionnelle à (1 - niveau_mare).
+        if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
+            and m.niveau_mare < seuil_niveau_ponte_aedes) {
+            float marge  <- max(0.0, 1.0 - m.niveau_mare);
+            float pontes <- lambda_aedes * kappa_aedes * facteur_temperature
+                          * facteur_humidite * float(taille_groupe) * marge;
+            float infectes <- (etat_sante = "I") ? pontes * rho_aedes : 0.0;
+
+            // Le cas index doit amorcer le réservoir même si rho est très faible.
+            if ((est_cas_index_A or est_cas_index_B) and pontes > 0.0 and infectes < 1.0) {
+                infectes <- 1.0;
+            }
+            if (infectes > 0.0) { m.oeufs_index <- true; }
+
+            m.oeufs_aedes_infectes <- m.oeufs_aedes_infectes + infectes;
+            m.oeufs_aedes_sains    <- m.oeufs_aedes_sains + max(0.0, pontes - infectes);
+        }
+    }
+
+    /**
+     * Ponte Culex sur eau libre : alimente l'accumulateur journalier du gîte,
+     * que la mare convertit en une cohorte larvaire unique (voir mare.gaml).
+     */
+    reflex ponte_culex
+        when: type_vecteur = "culex"
+          and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
+        mare m <- mare closest_to self;
+        if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
+            and m.volume_eau > 0) {
+            m.pontes_culex_jour <- m.pontes_culex_jour
+                + lambda_culex * kappa_culex * facteur_temperature
+                * facteur_humidite * float(taille_groupe);
+        }
+    }
+
     reflex se_deplacer {
         list<humain> h_pr <- humain at_distance rayon_detection_v;
         list<animal> a_pr <- animal at_distance rayon_detection_v;
@@ -66,7 +124,16 @@ species vecteur {
         } else {
             location <- location + {rnd(-vitesse, vitesse), rnd(-vitesse, vitesse)};
         }
-        if (!(zone_z3 covers location)) { location <- zone_z3.centroid; }
+        // Meme correction que dans hote.contraindre : le confinement porte sur
+        // l'emprise du MONDE, dans le repere des agents, et recadre sur le bord.
+        if (!(shape covers location)) {
+            float xmin <- shape.location.x - shape.width  / 2;
+            float xmax <- shape.location.x + shape.width  / 2;
+            float ymin <- shape.location.y - shape.height / 2;
+            float ymax <- shape.location.y + shape.height / 2;
+            location <- {min(xmax, max(xmin, location.x)),
+                         min(ymax, max(ymin, location.y))};
+        }
     }
 
     /**
@@ -82,6 +149,36 @@ species vecteur {
      * produisaient qu'un seul tirage à b = 0,11 : la force d'infection était
      * sous-estimée d'un ordre de grandeur et aucune épidémie ne démarrait.
      * La formule est exacte lorsque les deux échelles valent 1.
+     *
+     * ---------------------------------------------------------------------
+     * FORME FONCTIONNELLE DE LA FORCE D'INFECTION
+     *
+     * Cecilia et al. (2022, PLoS Negl Trop Dis 16(11)) relèvent que 29 modèles
+     * de FVR sur 43 ne justifient pas leur choix de forme fonctionnelle, alors
+     * qu'il encode l'hypothèse de contact hôte/vecteur et détermine largement
+     * les prédictions. Le choix est donc explicité ici.
+     *
+     * Ce modèle n'utilise aucune des trois formes classiques (frequency-
+     * dependent réservoir FR, mass action MA, frequency-dependent infectieux
+     * FI). Le contact est SIMULÉ, non postulé :
+     *
+     *   - le taux de piqûre par moustique est plafonné par le cycle
+     *     gonotrophique, a = 1/tau(T) — comme dans FR, et non proportionnel à
+     *     la densité d'hôtes comme dans MA, qui autorise un taux de piqûre
+     *     au-delà de la capacité physiologique ;
+     *   - les piqûres du groupe sont RÉPARTIES sur les seuls hôtes présents
+     *     dans la portée de vol, donc le nombre de piqûres reçues par hôte
+     *     croît quand les hôtes se raréfient, sans jamais dépasser ce que le
+     *     groupe peut délivrer.
+     *
+     * Le comportement obtenu est celui de la forme hybride de Chitnis et al.
+     * (2013), la plus justifiée du corpus (5 modèles sur 8 l'argumentent) :
+     * un contact borné aux deux extrémités, par la physiologie du vecteur d'un
+     * côté et par la disponibilité des hôtes de l'autre. La différence est que
+     * la borne côté hôte n'est pas un paramètre libre (le « sigma_h » de
+     * Chitnis, qu'ils reconnaissent impossible à estimer sur le terrain) mais
+     * émerge de la géométrie : portée de vol et position réelle des troupeaux.
+     * ---------------------------------------------------------------------
      */
     reflex repas_sang {
         float tau_j  <- world.cycle_gonotrophique(temperature, type_vecteur);
@@ -115,6 +212,10 @@ species vecteur {
 
                 // ---- Vecteur infectieux : il inocule les hôtes qu'il pique ----
                 if (etat_sante = "I") {
+                    // Capturés ici : dans les `ask` imbriqués ci-dessous,
+                    // `myself` désigne l'HÔTE et non plus le vecteur.
+                    string v_espece  <- type_vecteur;
+                    string v_origine <- origine_infection;
                     if (piqures_animal >= 1.0 and !empty(a_pr)) {
                         float piq_ind <- (piqures_animal / float(length(a_pr)))
                                        / float(echelle_superindividu);
@@ -125,6 +226,14 @@ species vecteur {
                                 jours_dans_etat <- 0;
                                 nb_infections_totales <- nb_infections_totales + echelle_superindividu;
                                 incidence_c           <- incidence_c + echelle_superindividu;
+                                // Journal de transmission : c'est le seul point
+                                // du modèle où l'on connaisse à la fois QUAND,
+                                // OÙ et PAR QUI l'infection s'est produite.
+                                ask world {
+                                    do journaliser_transmission("animal",
+                                        echelle_superindividu, v_espece, v_origine,
+                                        myself.location);
+                                }
                             }
                         }
                     }
@@ -138,6 +247,11 @@ species vecteur {
                                 jours_dans_etat <- 0;
                                 nb_infections_totales <- nb_infections_totales + echelle_superindividu;
                                 incidence_c           <- incidence_c + echelle_superindividu;
+                                ask world {
+                                    do journaliser_transmission("humain",
+                                        echelle_superindividu, v_espece, v_origine,
+                                        myself.location);
+                                }
                             }
                         }
                     }
@@ -192,55 +306,6 @@ species vecteur {
             if (type_vecteur = "aedes") {
                 mare_origine.loc_aedes_jours <- mare_origine.loc_aedes_jours + 1.0;
             }
-        }
-    }
-
-    /**
-     * Ponte Aedes sur mare ASSÉCHÉE : le fait d'être infectée ne conditionne
-     * plus la ponte elle-même (auparavant seules les femelles I pondaient, ce
-     * qui rendait la population d'Aedes non auto-entretenue), mais seulement la
-     * fraction rho_aedes d'œufs infectés (transmission verticale / TOT).
-     */
-    reflex ponte_aedes
-        when: type_vecteur = "aedes"
-          and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
-        mare m <- mare closest_to self;
-        // Ae. vexans pond sur le SOL HUMIDE EXONDÉ en bordure de mare, pas sur
-        // sol totalement sec ni sur l'eau libre. L'ancienne condition exigeait
-        // `volume_eau = 0`, jamais vraie dès la mise en eau : la ponte devenait
-        // impossible toute la saison des pluies et l'espèce s'éteignait.
-        // La bande exondée disponible est proportionnelle à (1 - niveau_mare).
-        if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
-            and m.niveau_mare < seuil_niveau_ponte_aedes) {
-            float marge  <- max(0.0, 1.0 - m.niveau_mare);
-            float pontes <- lambda_aedes * kappa_aedes * facteur_temperature
-                          * facteur_humidite * float(taille_groupe) * marge;
-            float infectes <- (etat_sante = "I") ? pontes * rho_aedes : 0.0;
-
-            // Le cas index doit amorcer le réservoir même si rho est très faible.
-            if ((est_cas_index_A or est_cas_index_B) and pontes > 0.0 and infectes < 1.0) {
-                infectes <- 1.0;
-            }
-            if (infectes > 0.0) { m.oeufs_index <- true; }
-
-            m.oeufs_aedes_infectes <- m.oeufs_aedes_infectes + infectes;
-            m.oeufs_aedes_sains    <- m.oeufs_aedes_sains + max(0.0, pontes - infectes);
-        }
-    }
-
-    /**
-     * Ponte Culex sur eau libre : alimente l'accumulateur journalier du gîte,
-     * que la mare convertit en une cohorte larvaire unique (voir mare.gaml).
-     */
-    reflex ponte_culex
-        when: type_vecteur = "culex"
-          and (age mod max(1, int(world.cycle_gonotrophique(temperature, type_vecteur)))) = 0 {
-        mare m <- mare closest_to self;
-        if (m != nil and (location distance_to m.location) < rayon_depot_oeufs
-            and m.volume_eau > 0) {
-            m.pontes_culex_jour <- m.pontes_culex_jour
-                + lambda_culex * kappa_culex * facteur_temperature
-                * facteur_humidite * float(taille_groupe);
         }
     }
 

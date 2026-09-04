@@ -74,6 +74,16 @@ global {
     int nb_agents_animaux <- 0;
     int nb_campements     <- 0;
 
+    // Population Culex de fond, présente dans les deux expériences. Le protocole
+    // impose qu'elle soit ENTIÈREMENT SAINE : le seul foyer initial est le cas
+    // index de l'expérience. `prevalence_culex_init` n'est laissé ouvert que
+    // pour les analyses de sensibilité.
+    int   nb_culex_init         <- 100;
+    float prevalence_culex_init <- 0.0;
+    // Volume d'amorçage des seuls gîtes portant ces Culex (m³) : la simulation
+    // démarre avant les pluies et les Culex ne survivent pas sur un gîte sec.
+    float volume_amorce_culex   <- 80.0;
+
     // =========================================================================
     // PARAMÈTRES DÉMOGRAPHIQUES
     // =========================================================================
@@ -124,6 +134,33 @@ global {
                                     // (appliquée jour par jour : 0.995/j => demi-vie ~140 j,
                                     //  compatible avec la survie inter-saisonnière réelle)
     float survie_larvaire_aedes <- 0.85;  // Survie journalière des stades aquatiques Aedes
+
+    // =========================================================================
+    // RESERVOIR D'OEUFS QUIESCENTS A L'INITIALISATION
+    // =========================================================================
+    // Ae. vexans passe la saison seche a l'etat d'oeuf, depose sur le sol
+    // exonde en bordure de mare et resistant a la dessiccation. Une simulation
+    // qui demarre en debut de saison des pluies doit donc trouver un stock
+    // deja constitue : partir de zero revient a supposer que l'espece vient de
+    // disparaitre de la zone, et aucune emergence n'est alors possible.
+    //
+    // Densite reprise de Soti et al. (2012, PLoS Negl Trop Dis 6(8)), qui
+    // amorcent leur modele de Barkedji avec « an initial density of 1000
+    // eggs.m-2 » proportionnelle a la surface de la mare, pour des simulations
+    // demarrant le 1er juin.
+    //
+    // Ici le stock est reparti sur la BERGE EXONDEE (surface_max - surface_eau)
+    // plutot que sur la surface totale : c'est la partie assechee qui porte les
+    // oeufs, et c'est aussi la surface qu'utilise `ponte_aedes` en cours de
+    // simulation. Les deux coincident quand la mare est a sec.
+    float densite_oeufs_initiale_aedes <- 1000.0;   // oeufs / m2 de berge exondee
+
+    // Fraction du stock initial deja infectee. A ZERO PAR DEFAUT : le protocole
+    // des deux experiences impose un foyer unique (le cas index), et des oeufs
+    // infectes en constitueraient un second. Ce parametre n'est ouvert que pour
+    // etudier la persistance inter-saisonniere, ou l'hypothese d'un virus ayant
+    // franchi la saison seche dans les oeufs est justement ce que l'on teste.
+    float prevalence_oeufs_initiale <- 0.0;
     float Td_aedes     <- 7.0;      // Durée minimale de sécheresse avant éclosion
     // Niveau de remplissage au-dessus duquel il ne reste plus de bande exondée
     // où pondre. En dessous, la quantité pondue est proportionnelle à la
@@ -132,7 +169,99 @@ global {
     // Montée du plan d'eau (en fraction de niveau) qui submerge la berge et
     // déclenche l'éclosion des œufs quiescents qui y ont été pondus.
     float seuil_montee_eclosion <- 0.05;
-    float rho_aedes    <- 0.02;     // Transmission verticale du virus (TOT)
+    // Transmission verticale (transovarienne). Elle N'ENTRE PAS dans le R0 :
+    // Chitnis et al. (2013) montre que le taux de transmission verticale
+    // n'affecte pas le R0 mais la persistance inter-épidémique ; Pedro et al.
+    // (2016) ne trouve un effet substantiel qu'au-dessus de 20 % de descendance
+    // infectée, très au-dessus des taux mesurés expérimentalement (revue de
+    // Cecilia et al. 2022, PLoS Negl Trop Dis 16(11)). rho_aedes se mesure donc
+    // sur le stock d'œufs infectés franchissant la saison sèche — voir
+    // `oeufs_infectes_survivants` dans core/r0_vectoriel.gaml.
+    float rho_aedes    <- 0.02;
+
+    // =========================================================================
+    // GÉOMÉTRIE ET BASSIN VERSANT DES MARES (Soti et al. 2010)
+    // =========================================================================
+    // Ac = n · Amax, avec n entre 1 et 20. Faute de MNT exploitable pour
+    // délimiter le bassin versant réel des mares du lit du Ferlo, les deux
+    // ensembles ne sont distingués que par la valeur de n : le lit principal
+    // draine largement, les dépressions hors lit se remplissent surtout par la
+    // pluie directe et un ruissellement de proximité.
+    // VALEURS PROVISOIRES. Le calibrage propre demande la série climatique
+    // corrigée : celle de data/climat/Climat_2025.csv totalise 1833 mm/an pour
+    // 300-500 mm documentés au Ferlo, avec quatre journées à 211-331 mm là où
+    // Soti borne le forçage à 45 mm/j. Sous ce forçage, toute valeur de n
+    // sature les gîtes — le bilan ne peut pas être calé tant que l'entrée est
+    // fausse. Ces valeurs restent dans la plage publiée [1, 20] et évitent la
+    // saturation sous un forçage plausible.
+    float n_bassin_lit      <- 6.0;
+    float n_bassin_hors_lit <- 2.0;
+
+    // Valeurs par défaut du bilan hydrique, reprises par chaque mare à sa
+    // création. Elles existent au niveau global pour pouvoir être exposées aux
+    // expériences : l'analyse de sensibilité de Soti et al. (2010) place les
+    // propriétés de sol (Gmax, k_sol) et le coefficient de perte L DEVANT la
+    // forme de la mare et l'estimation du bassin versant. Ce sont donc les
+    // premiers paramètres à balayer, et les bornes reprennent les plages
+    // publiées.
+    float Gmax_defaut        <- 15.0;   // seuil de ruissellement, mm/j  [10-20]
+    float Kr_defaut          <- 0.30;   // coefficient de ruissellement  [0.15-0.40]
+    float L_perte_defaut     <- 12.0;   // pertes journalières, mm/j     [5-20]
+    float k_sol_defaut       <- 0.9;    // décroissance de l'humidité    [0-1]
+    float alpha_forme_defaut <- 2.0;    // exposant de la loi A(h)       [1-3]
+    float hauteur_max_defaut <- 1.5;    // profondeur maximale du gîte, m
+    // Surface au-delà de laquelle une mare est rattachée au lit principal.
+    // Proxy de taille : Soti et al. (2010) relève que 80 % des mares de
+    // Barkedji font moins de 0.5 ha et 2.3 % plus de 5 ha, les plus grandes
+    // étant celles du lit fossile.
+    float seuil_surface_lit_ferlo <- 5000.0;   // m²
+    // Remplissage des gîtes à la (re)création saisonnière, en fraction du
+    // volume maximal. Valeur de travail : la reconstruction des mares à chaque
+    // changement de saison réinitialise l'état hydrique.
+    float remplissage_initial_mare <- 0.30;
+
+    // =========================================================================
+    // ZPOM ET ZONAGE (Vignolles et al. 2009 ; Soti et al. 2009)
+    // =========================================================================
+    // Rayons des tampons autour des gîtes, en mètres. 500 m est l'échelle à
+    // laquelle l'indice de fermeture du paysage explique le mieux l'incidence
+    // sérologique observée à Barkedji ; 100 et 1000 m sont conservés pour
+    // pouvoir refaire la comparaison au lieu de la présupposer.
+    float rayon_zpom_court <- 100.0;
+    float rayon_zpom_moyen <- 500.0;
+    float rayon_zpom_long  <- 1000.0;
+
+    // Formations comptées comme « fermées » dans l'indice de fermeture : les
+    // couverts ligneux, arborés ou arbustifs. Les steppes et les cultures sont
+    // des milieux ouverts.
+    list<string> formations_fermees <- [
+        "SAVANES ARBUSTIVES ET ARBOREES",
+        "SAVANES ARBUSTIVES",
+        "STEPPES ARBOREES"
+    ];
+    // Longueur de l'historique de surface en eau conservé par gîte, en jours.
+    // Doit couvrir la plus longue durée de développement larvaire attendue,
+    // puisque le R0 vectoriel de Porphyre compare la surface à t et à t-T.
+    int   profondeur_historique_surface <- 40;
+
+    // =========================================================================
+    // FENÊTRES DE CALCUL DU R0
+    // =========================================================================
+    // Chaque R0 est calcule UNE SEULE FOIS, sur les premiers jours de la
+    // simulation, et les deux fenetres sont independantes : 10 jours pour le
+    // R0 animal, 21 pour le R0 Aedes — ce dernier doit laisser le temps d'un
+    // cycle oeuf -> adulte, ce qui n'aurait pas de sens pour un R0 mesure a
+    // partir d'un cas index animal.
+    int fenetre_R0_animal <- 10;
+    int fenetre_R0_aedes  <- 21;
+
+    // =========================================================================
+    // PERSISTANCE INTER-SAISONNIÈRE
+    // =========================================================================
+    // Effet réel de la transmission verticale, que le R0 ne capte pas.
+    float oeufs_inf_pic     <- 0.0;   // pic du stock d'œufs infectés
+    float oeufs_inf_report  <- 0.0;   // stock au retour de la saison des pluies
+    float taux_report_oeufs <- 0.0;   // report / pic
 
     float kappa_culex  <- 0.5;
     float lambda_culex <- 150.0;
@@ -189,6 +318,13 @@ global {
     string saison <- "";
     matrix ndvi_actuel;
     matrix ndwi_actuel;
+    // Emprise géographique propre à chacun de ces rasters, mémorisée en même
+    // temps qu'eux. C'est elle, et non l'emprise du monde, qui convertit une
+    // position en indice de pixel : les deux ne coïncident que si `shape` est
+    // l'enveloppe du raster, ce qui cesse d'être vrai dès que la base spatiale
+    // change (voir base_zone3 dans donnees_chemins.gaml).
+    geometry env_ndvi <- nil;
+    geometry env_ndwi <- nil;
     list<geometry> fond_geoms   <- [];
     list<int>      fond_classes <- [];
     list<rgb> palette_occsol <- [

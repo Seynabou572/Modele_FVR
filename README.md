@@ -28,6 +28,11 @@ en moustiques déjà infectés dès le retour des pluies — c'est ce mécanisme
 > bibliographique de chacun et localisation dans le code :
 > [`docs/processus_comportementaux.md`](docs/processus_comportementaux.md).
 
+> **Protocole ODD+D** — description standardisée du modèle (entités, concepts de
+> conception, sous-modèles, validation, limites connues) :
+> [`docs/ODD+D.md`](docs/ODD+D.md). Cette révision met à jour le protocole du
+> 19 août 2026 pour tenir compte des correctifs de la branche.
+
 ## 2. Architecture du projet
 
 ```

@@ -4,3 +4,12 @@ outputs/*.csv
 
 # Exports de moniteurs générés par GAMA lors des runs GUI
 models/monitors/
+
+# Sorties ecrites lorsque GAMA resout ../outputs depuis models/core
+# au lieu de models/ (voir docs/ODD+D.md, limites connues)
+models/outputs/
+
+# Sauvegardes locales des shapefiles avant assainissement.
+# Les fichiers d'origine font autorite sur la branche `na`, ou ils sont
+# suivis par Git LFS : inutile de les dupliquer ici.
+*.original

@@ -68,7 +68,13 @@ species animal parent: hote {
             mare_actuelle <- m;
             if !(m in memoire_mares) { add m to: memoire_mares; }
             cible <- m.location;
-        } else if (saison = "Dabbuunde") { cible <- campement_origine.location; }
+        } else if (saison = "Dabbuunde" and campement_origine != nil
+                   and !dead(campement_origine)) {
+            // Garde alignée sur humain.gaml : les campements sont détruits et
+            // recréés à chaque changement de saison, donc `campement_origine`
+            // peut pointer un agent mort.
+            cible <- campement_origine.location;
+        }
         else {
             list<vegetation> zones <- vegetation where (each.biomasse > 15.0 and
                 (each.location distance_to location) < rayon_recherche_paturage);
@@ -84,7 +90,7 @@ species animal parent: hote {
             cible <- explorer_routes();
         }
         if (cible = nil) {
-            if (campement_origine != nil) { cible <- campement_origine.location; }
+            if (campement_origine != nil and !dead(campement_origine)) { cible <- campement_origine.location; }
             else if (!empty(memoire_mares)) { cible <- last(memoire_mares).location; }
         }
         do se_deplacer_vers(cible, vit);
@@ -103,12 +109,16 @@ species animal parent: hote {
     reflex mortalite_naturelle { if (flip(mu_c)) { do die; } }
 
     aspect default {
+        // Le troupeau doit rester visible sur une zone de 30 km de cote : le
+        // rayon est un compromis entre lisibilite et recouvrement mutuel.
         rgb couleur;
         switch etat_sante {
-            match "S" { couleur <- #lightgreen; }  match "E" { couleur <- #orange; }
-            match "I" { couleur <- #red; }          match "R" { couleur <- rgb(147,197,253); }
-            default   { couleur <- #lightgreen; }
+            match "S" { couleur <- rgb(255, 235, 60);  }   // jaune
+            match "E" { couleur <- rgb(255, 150, 0);   }   // orange
+            match "I" { couleur <- rgb(220, 0, 0);     }   // rouge
+            match "R" { couleur <- rgb(120, 120, 120); }   // gris
+            default   { couleur <- rgb(255, 235, 60);  }
         }
-        draw circle(unite_z3 * 0.009) color: couleur border: couleur;
+        draw circle(unite_z3 * 0.006) color: couleur border: rgb(60, 60, 60);
     }
 }

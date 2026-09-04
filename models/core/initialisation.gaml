@@ -13,6 +13,7 @@ import "biologie_thermique.gaml"
 import "saisons_occsol.gaml"
 import "dynamique_population.gaml"
 import "r0_vectoriel.gaml"
+import "validation.gaml"
 import "exports_csv.gaml"
 import "../environnement/occsol_polygone.gaml"
 import "../environnement/zone_eau_binaire.gaml"
@@ -21,6 +22,7 @@ import "../environnement/vegetation.gaml"
 import "../environnement/route.gaml"
 import "../environnement/campement.gaml"
 import "../environnement/mare.gaml"
+import "../environnement/zone_suivi.gaml"
 import "../environnement/cohorte_larvaire.gaml"
 import "../agents/hote.gaml"
 import "../agents/humain.gaml"
@@ -30,18 +32,33 @@ import "../agents/vecteur.gaml"
 global {
 
     // =========================================================================
-    // ACTION : INITIALISATION DES 100 CULEX — utilisée par EXP A et EXP B.
+    // ACTION : POPULATION CULEX DE FOND — utilisée par EXP A et EXP B.
+    //
+    // Le protocole des deux expériences impose que TOUS les Culex soient sains
+    // à l'initialisation : le seul foyer est le cas index de l'expérience
+    // (1 animal virémique en EXP B, 1 femelle Aedes infectée en EXP A). La
+    // version précédente en infectait 5 % dans les deux cas, ce qui ajoutait
+    // cinq foyers concurrents et rendait le R0 mesuré incomparable à sa
+    // définition — le nombre de cas secondaires issus d'UN cas index.
+    // `prevalence_culex_init` reste exposé pour les analyses de sensibilité.
     // =========================================================================
-    action initialiser_culex_100(mare mare_exclue) {
-        int nb_culex_init <- 100;
-        int nb_infectes   <- int(nb_culex_init * 0.05);
+    action initialiser_culex_fond(mare mare_exclue) {
+        int nb_infectes <- int(nb_culex_init * prevalence_culex_init);
         list<mare> mares_dispo <- list((mare_exclue = nil) ? mare : (mare - mare_exclue));
 
         if (!empty(mares_dispo)) {
             loop i from: 0 to: nb_culex_init - 1 {
                 mare m_c <- mares_dispo[i mod length(mares_dispo)];
-                m_c.volume_eau  <- 80.0;
-                m_c.surface_eau <- min(m_c.surface_max, m_c.volume_eau * 2.0);
+                // Amorçage hydrique : les Culex pondent sur eau libre et ne
+                // survivent pas sur un gîte sec. La simulation démarre avant
+                // les pluies, aucune mare n'est encore en eau — on met donc en
+                // eau les seuls gîtes porteurs de cette population de fond.
+                // C'est un artefact d'initialisation, pas un état simulé : il
+                // est repris par le bilan hydrique dès le premier pas de temps.
+                if (m_c.volume_eau <= 0.0) {
+                    m_c.volume_eau  <- min(volume_amorce_culex, m_c.volume_max_reference);
+                    m_c.surface_eau <- m_c.surface_pour_volume(m_c.volume_eau);
+                }
 
                 if (length(vecteur) < max_vecteurs) {
                     bool infecte <- (i < nb_infectes);
@@ -60,8 +77,47 @@ global {
                     }
                 }
             }
-            write "Culex initiaux : " + nb_culex_init + " créés (" + nb_infectes
-                + " infectés à 5%), positionnés exactement sur les mares (volume_eau=80.0).";
+            write "Culex de fond : " + nb_culex_init + " agents créés, " + nb_infectes
+                + " infectés (prévalence initiale " + prevalence_culex_init + ").";
+        }
+    }
+
+    // =========================================================================
+    // ACTION : AMORCAGE DU RESERVOIR D'OEUFS QUIESCENTS AEDES
+    //
+    // Ae. vexans franchit la saison seche a l'etat d'oeuf, depose sur la berge
+    // exondee et resistant a la dessiccation. Une simulation qui demarre en
+    // debut de saison des pluies doit donc trouver ce stock deja en place.
+    // Sans lui, aucun Aedes ne peut emerger : l'espece n'apparait que si un cas
+    // index adulte est cree, et disparait avec lui.
+    //
+    // Densite : Soti et al. (2012), 1000 oeufs.m-2 sur les mares de Barkedji.
+    // Repartie ici sur la partie ASSECHEE de chaque gite, qui est la surface
+    // reellement porteuse d'oeufs — et celle qu'utilise `ponte_aedes` ensuite.
+    // =========================================================================
+    action amorcer_oeufs_aedes {
+        if (densite_oeufs_initiale_aedes > 0.0 and !empty(mare)) {
+            float total     <- 0.0;
+            float total_inf <- 0.0;
+            int   nb_gites  <- 0;
+            ask mare {
+                float berge <- max(0.0, surface_max - surface_eau);
+                if (berge > 0.0) {
+                    float oeufs <- berge * densite_oeufs_initiale_aedes;
+                    float inf   <- oeufs * prevalence_oeufs_initiale;
+                    oeufs_aedes_infectes <- oeufs_aedes_infectes + inf;
+                    oeufs_aedes_sains    <- oeufs_aedes_sains + max(0.0, oeufs - inf);
+                    if (inf > 0.0) { oeufs_index <- true; }
+                    total     <- total + oeufs;
+                    total_inf <- total_inf + inf;
+                    nb_gites  <- nb_gites + 1;
+                }
+            }
+            write "Reservoir Aedes : " + int(total) + " oeufs quiescents deposes sur "
+                + nb_gites + " gites (" + int(total_inf) + " infectes, prevalence "
+                + prevalence_oeufs_initiale + ").";
+            write "   densite " + densite_oeufs_initiale_aedes
+                + " oeufs/m2 de berge exondee (Soti et al. 2012).";
         }
     }
 
@@ -98,11 +154,13 @@ global {
         n_animal         <- duree_cycle_extrinseque;
 
         do charger_climat;
+        do diagnostiquer_forcage;
 
         write "Paramètres R0 :";
         write "  r = 1/duree_infection = " + with_precision(r_hote, 4);
         write "  unite_z3 = " + with_precision(unite_z3, 0)
             + " (doit valoir ~32000 si la projection est bien métrique)";
+
         write "  portée de vol : Aedes " + portee_vol_aedes_m + " m, Culex "
             + portee_vol_culex_m + " m";
         write "  a attendu ~ 1/tau : Aedes "
@@ -111,7 +169,8 @@ global {
             + " piqûre/vecteur/jour à " + with_precision(temperature, 1) + " °C";
         write "  n (EIP) à " + with_precision(temperature, 1) + " °C = "
             + with_precision(eip_jours(temperature), 2) + " j";
-        write "  p et n seront réestimés à chaque fenêtre de 10 jours.";
+        write "  R0_animal calculé UNE FOIS sur les " + fenetre_R0_animal + " premiers jours ;";
+        write "  R0_Aedes  calculé UNE FOIS sur les " + fenetre_R0_aedes + " premiers jours.";
 
         create route from: ROUTE_SHP with: [
             code_route   :: int(read("CODE")),
@@ -129,6 +188,20 @@ global {
         ];
         ask sol        { do calculer_proprietes_sol; }
         ask vegetation { do calculer_capacite_vegetation; }
+
+        // Couche de zonage : 796 polygones typés mare / campement / vegetation.
+        // Support des sorties spatiales, sans effet sur la dynamique simulée.
+        create zone_suivi from: ZONE_SHP with: [
+            type_zone   :: string(read("Name")),
+            classe_zone :: int(read("id_class"))
+        ] {
+            surface_zone <- area(shape);
+            id_zone      <- name;
+        }
+        write "Zones de suivi : " + length(zone_suivi) + " polygones ("
+            + length(zone_suivi where (each.type_zone = "mare")) + " mare, "
+            + length(zone_suivi where (each.type_zone = "campement")) + " campement, "
+            + length(zone_suivi where (each.type_zone = "vegetation")) + " vegetation).";
 
         // NDWI binaire désactivé : EAU_BINAIRE_SHP (donnees_chemins.gaml) est commenté
         // tant que data/occsol/eau_binaire/eau_binaire_z3.shp n'est pas fourni.
@@ -154,7 +227,7 @@ global {
                         rnd(-rayon_piqure_humain * 2, rayon_piqure_humain * 2),
                         rnd(-rayon_piqure_humain * 2, rayon_piqure_humain * 2)
                     };
-                    if (!(zone_z3 covers location)) { location <- camp.location; }
+                    if (!(shape covers location)) { location <- camp.location; }
                     etat_sante      <- "S";
                     jours_dans_etat <- 0;
                 }
@@ -171,7 +244,7 @@ global {
                         rnd(-rayon_piqure_animal * 3, rayon_piqure_animal * 3),
                         rnd(-rayon_piqure_animal * 3, rayon_piqure_animal * 3)
                     };
-                    if (!(zone_z3 covers location)) { location <- camp.location; }
+                    if (!(shape covers location)) { location <- camp.location; }
                     etat_sante      <- "S";
                     jours_dans_etat <- 0;
                     NEC             <- 3.5;
@@ -187,6 +260,10 @@ global {
             }
         }
         write "Humains : " + length(humain) + " agents S. Animaux : " + length(animal) + " agents S.";
+
+        // Le reservoir d'oeufs preexiste au cas index : c'est ce qui reste de la
+        // saison precedente, et il conditionne toute emergence d'Aedes.
+        do amorcer_oeufs_aedes;
 
         if (type_experience = "Aedes") {
             mare mare_reference <- nil;
@@ -210,45 +287,26 @@ global {
                     origine_infection <- "verticale";
                 }
                 write "EXP A : 1 femelle Aedes adulte infectée (cas index, origine_infection=verticale) créée.";
-                write "   Positionnée exactement sur la mare sèche : pondra dès le jour 0 (transmission_verticale,";
-                write "   reflex exécuté avant l'incrémentation de l'âge dans mourir) œufs infectés + sains (rho_aedes).";
+                write "   Positionnée exactement sur la mare sèche : pond dès le cycle 0 (reflex ponte_aedes";
+                write "   déclaré avant se_deplacer) des œufs infectés + sains (rho_aedes).";
             }
 
-            do initialiser_culex_100(mare_reference);
+            do initialiser_culex_fond(mare_reference);
 
         } else if (type_experience = "Animal") {
+            // Cas index UNIQUE de l'expérience Animal : un seul animal virémique.
+            // Ni Aedes infectée, ni Culex infectés — la version précédente créait
+            // en plus une femelle Aedes I et 5 Culex I, soit trois foyers pour un
+            // R0 censé mesurer la descendance d'un seul.
             if (length(animal) > 0) {
                 animal a_index <- first(animal);
                 a_index.etat_sante      <- "I";
                 a_index.jours_dans_etat <- 0;
                 a_index.est_cas_index_B <- true;
-                write "EXP B : 1 animal I créé comme cas index.";
+                write "EXP B : 1 animal I créé comme cas index (foyer unique).";
             }
 
-            mare mare_seche <- nil;
-            if (!empty(mare)) {
-                mare_seche <- first(mare);
-                mare_seche.volume_eau  <- 0.0;
-                mare_seche.surface_eau <- 0.0;
-
-                create vecteur {
-                    type_vecteur     <- "aedes";
-                    etat_sante       <- "I";
-                    taille_groupe    <- echelle_si_vecteur;
-                    vitesse          <- vitesse_aedes;
-                    mare_origine     <- mare_seche;
-                    location         <- mare_seche.location;
-                    age              <- 0;
-                    jours_dans_etat  <- 0;
-                    est_cas_index_A  <- false;
-                    est_cas_index_B  <- true;
-                    origine_infection <- "verticale";
-                }
-                write "EXP B : 1 femelle Aedes adulte infectée (cas index B, origine_infection=verticale) créée.";
-                write "   Positionnée exactement sur la mare sèche (volume_eau=0) : pondra dès le jour 0.";
-            }
-
-            do initialiser_culex_100(mare_seche);
+            do initialiser_culex_fond(nil);
         }
 
         reseau_routier <- as_edge_graph(route);

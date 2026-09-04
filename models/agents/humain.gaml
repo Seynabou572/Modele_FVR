@@ -38,7 +38,8 @@ species humain parent: hote {
             mare m <- md closest_to self;
             derniere_mare <- m;
             cible <- m.location;
-        } else if (saison = "Dabbuunde" and campement_origine != nil) {
+        } else if (saison = "Dabbuunde" and campement_origine != nil
+                   and !dead(campement_origine)) {
             cible <- campement_origine.location;
         }
 
@@ -59,7 +60,9 @@ species humain parent: hote {
             cible <- explorer_routes();
         }
 
-        if (cible = nil and campement_origine != nil) { cible <- campement_origine.location; }
+        if (cible = nil and campement_origine != nil and !dead(campement_origine)) {
+            cible <- campement_origine.location;
+        }
 
         do se_deplacer_vers(cible, vit);
     }
@@ -76,9 +79,12 @@ species humain parent: hote {
     aspect default {
         rgb couleur;
         switch etat_sante {
-            match "S" { couleur <- #green;  } match "E" { couleur <- #yellow; }
-            match "I" { couleur <- #red;    } match "R" { couleur <- #gray;   }
+            match "S" { couleur <- rgb(120, 200, 255); }   // bleu clair
+            match "E" { couleur <- rgb(255, 150, 0);   }
+            match "I" { couleur <- rgb(220, 0, 0);     }
+            match "R" { couleur <- rgb(120, 120, 120); }
+            default   { couleur <- rgb(120, 200, 255); }
         }
-        draw square(unite_z3 * 0.012) color: couleur border: couleur;
+        draw square(unite_z3 * 0.007) color: couleur border: rgb(40, 40, 40);
     }
 }

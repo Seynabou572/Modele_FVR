@@ -135,19 +135,37 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
         monitor "Vent m/s"        value: with_precision(vitesse_vent, 1);
         monitor "Facteur humidité" value: with_precision(facteur_humidite, 3);
         monitor "Facteur vent"    value: with_precision(facteur_vent, 3);
-        monitor "R0_Aedes (10j)"  value: with_precision(R0_Aedes_10j, 4)  color: #purple;
-        monitor "R0_animal (10j)" value: with_precision(R0_animal_10j, 4) color: #darkorange;
+        monitor "R0_Aedes (J1-21)"  value: with_precision(R0_Aedes_10j, 4)  color: #purple;
+        monitor "R0_animal (J1-10)" value: with_precision(R0_animal_10j, 4) color: #darkorange;
         monitor "m_Aedes"         value: with_precision(m_Aedes_10j, 4);
         monitor "a_Aedes"         value: with_precision(a_Aedes_10j, 4);
         monitor "C_Aedes"         value: with_precision(C_Aedes_10j, 4);
-        monitor "Fenêtre"         value: num_fenetre;
-        monitor "Jours fenêtre"   value: nb_jours_fenetre;
+        monitor "Jours fenêtre animal" value: nb_jours_animal;
+        monitor "Jours fenêtre Aedes"  value: nb_jours_aedes;
         monitor "Aedes I (agents)" value: length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "I"));
         monitor "Aedes vertical I" value: length(vecteur where (each.type_vecteur = "aedes" and each.origine_infection = "verticale" and each.etat_sante = "I"));
 
         monitor "Gîtes évalués"   value: nb_mares_evaluees;
         monitor "R0 local médian" value: with_precision(R0_local_median, 4) color: #teal;
+        monitor "R0 protocole (Aedes)"  value: with_precision(R0_Aedes_protocole, 4)  color: #purple;
+        monitor "R0 protocole (animal)" value: with_precision(R0_animal_protocole, 4) color: #darkorange;
+        monitor "R0 vectoriel médian"   value: with_precision(
+            empty(mare) ? 0.0 : median(mare collect each.R0_vectoriel), 4) color: #seagreen;
+        monitor "rho recouvrement max"  value: with_precision(
+            empty(mare) ? 0.0 : max(mare collect each.rho_recouvrement), 5);
+        monitor "Œufs inf. reportés"    value: int(oeufs_inf_report);
+        monitor "Taux report œufs"      value: with_precision(taux_report_oeufs, 4);
+        monitor "Volume moyen mares m3" value: with_precision(
+            empty(mare) ? 0.0 : mean(mare collect each.volume_eau), 1);
+        monitor "Niveau moyen mares"    value: with_precision(
+            empty(mare) ? 0.0 : mean(mare collect each.niveau_mare), 3);
         monitor "R0 local max"    value: with_precision(R0_local_max, 4) color: #crimson;
+        monitor "Forçage hors enveloppe" value: forcage_hors_enveloppe;
+        monitor "Cumul pluie série mm"   value: with_precision(cumul_pluie_serie, 0);
+        monitor "Aedes (individus)"      value: int(length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur);
+        monitor "Culex (individus)"      value: int(length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur);
+        monitor "Zones avec infection"   value: length(zone_suivi where (each.jour_premiere_infection >= 0));
+        monitor "Campements touchés"     value: length(zone_suivi where (each.type_zone = "campement" and each.jour_premiere_infection >= 0));
         monitor "Gîtes R0>1"      value: nb_mares_R0_sup1 color: #crimson;
         monitor "Part gîtes R0>1" value: with_precision(part_mares_R0_sup1 * 100.0, 1);
 
@@ -163,7 +181,5 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
         monitor "NDWI moyen"      value: with_precision(ndwi_moyen_global, 3) color: #blue;
 
         monitor "Infections totales (cumul)" value: nb_infections_totales color: #red;
-        monitor "R0_Aedes moyen (cumul)"     value: (nb_R0_Aedes > 0) ? with_precision(somme_R0_Aedes / nb_R0_Aedes, 4) : 0.0;
-        monitor "R0_animal moyen (cumul)"    value: (nb_R0_animal > 0) ? with_precision(somme_R0_animal / nb_R0_animal, 4) : 0.0;
     }
 }

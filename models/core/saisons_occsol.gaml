@@ -9,6 +9,7 @@ import "parametres_globaux.gaml"
 import "donnees_chemins.gaml"
 import "../environnement/occsol_polygone.gaml"
 import "../environnement/mare.gaml"
+import "../environnement/zone_suivi.gaml"
 import "../environnement/campement.gaml"
 import "../environnement/cohorte_larvaire.gaml"
 
@@ -22,7 +23,7 @@ global {
 
     float ndvi_moyen_au_point(point pt, float rayon_m) {
         if (ndvi_actuel = nil) { return 0.3; }
-        geometry env <- shape;
+        geometry env <- (env_ndvi != nil) ? env_ndvi : shape;
         int ncols <- ndvi_actuel.columns;
         int nrows <- ndvi_actuel.rows;
         if (ncols = 0 or nrows = 0) { return 0.3; }
@@ -32,6 +33,10 @@ global {
         int col      <- int((pt.x - xmin) / env.width  * ncols);
         int row      <- int((ymax - pt.y)  / env.height * nrows);
         int rayon_px <- max(1, int(rayon_m / pixel_size));
+        // Hors emprise du raster : rien à lire, on rend la valeur par défaut
+        // plutôt que de laisser un indice négatif ou trop grand atteindre la
+        // matrice.
+        if (col < 0 or row < 0 or col >= ncols or row >= nrows) { return 0.3; }
         list<float> valeurs <- [];
         loop cx from: max(0, col - rayon_px) to: min(ncols-1, col + rayon_px) {
             loop ry from: max(0, row - rayon_px) to: min(nrows-1, row + rayon_px) {
@@ -43,7 +48,7 @@ global {
 
     float ndwi_moyen_au_point(point pt, float rayon_m) {
         if (ndwi_actuel = nil) { return 0.2; }
-        geometry env <- shape;
+        geometry env <- (env_ndwi != nil) ? env_ndwi : shape;
         int ncols <- ndwi_actuel.columns;
         int nrows <- ndwi_actuel.rows;
         if (ncols = 0 or nrows = 0) { return 0.2; }
@@ -53,6 +58,10 @@ global {
         int col      <- int((pt.x - xmin) / env.width  * ncols);
         int row      <- int((ymax - pt.y)  / env.height * nrows);
         int rayon_px <- max(1, int(rayon_m / pixel_size));
+        // Hors emprise du raster : rien à lire, on rend la valeur par défaut
+        // plutôt que de laisser un indice négatif ou trop grand atteindre la
+        // matrice.
+        if (col < 0 or row < 0 or col >= ncols or row >= nrows) { return 0.2; }
         list<float> valeurs <- [];
         loop cx from: max(0, col - rayon_px) to: min(ncols-1, col + rayon_px) {
             loop ry from: max(0, row - rayon_px) to: min(nrows-1, row + rayon_px) {
@@ -88,15 +97,48 @@ global {
         write "--- Saison " + nouvelle_saison + " (DOY " + (jour_debut_simulation + cycle) + ") ---";
         ndvi_actuel <- matrix(ndvi_raster_saisons[nouvelle_saison]);
         ndwi_actuel <- matrix(ndwi_raster_saisons[nouvelle_saison]);
+        // L'emprise du raster est mémorisée avec lui : c'est ELLE qui sert à
+        // convertir une position en indice de pixel, et non l'emprise du monde.
+        // Les deux coïncidaient tant que `shape` valait envelope(raster_NDVI) ;
+        // dès que la base spatiale change (base_zone3), elles divergent et le
+        // calcul d'indice sort des bornes de la matrice.
+        env_ndvi <- envelope(ndvi_raster_saisons[nouvelle_saison]);
+        env_ndwi <- envelope(ndwi_raster_saisons[nouvelle_saison]);
 
         create occsol_polygone from: occsol_shp_saisons[nouvelle_saison]
             with: [classe :: int(read("class"))];
 
-        list<geometry> brutes_mares <- (occsol_polygone where (each.classe = 2)) collect each.shape;
-        list<geometry> brutes_camps <- (occsol_polygone where (each.classe = 1)) collect each.shape;
+        list<geometry> parties_mares <- [];
+        list<geometry> parties_camps <- [];
 
-        list<geometry> parties_mares <- clusteriser_par_grille(brutes_mares, taille_cellule_cluster_mare);
-        list<geometry> parties_camps <- clusteriser_par_grille(brutes_camps, taille_cellule_cluster_camp);
+        if (base_zone3) {
+            // =================================================================
+            // SOURCE ZONE3 — les gîtes et les campements sont ceux de la couche
+            // zone3_entrainements, et non ceux dérivés de la classification
+            // raster saisonnière.
+            //
+            // Ces polygones ont été digitalisés UN PAR UN : ce sont déjà des
+            // objets discrets, pas des fragments de raster à recoller. On ne
+            // les passe donc PAS par `clusteriser_par_grille`, qui fusionnerait
+            // des campements voisins distants de moins de 600 m et détruirait
+            // précisément l'information que cette couche apporte.
+            //
+            // La couche étant unique et non saisonnière, les mêmes géométries
+            // sont reprises à chaque changement de saison : l'appariement
+            // ci-dessous retrouve alors chaque mare à l'identique et conserve
+            // son état hydrique et son stock d'œufs.
+            // =================================================================
+            parties_mares <- (zone_suivi where (each.type_zone = "mare"))      collect each.shape;
+            parties_camps <- (zone_suivi where (each.type_zone = "campement")) collect each.shape;
+            write "  source spatiale : zone3_entrainements — "
+                + length(parties_mares) + " mares, "
+                + length(parties_camps) + " campements avant filtrage.";
+        } else {
+            list<geometry> brutes_mares <- (occsol_polygone where (each.classe = 2)) collect each.shape;
+            list<geometry> brutes_camps <- (occsol_polygone where (each.classe = 1)) collect each.shape;
+            parties_mares <- clusteriser_par_grille(brutes_mares, taille_cellule_cluster_mare);
+            parties_camps <- clusteriser_par_grille(brutes_camps, taille_cellule_cluster_camp);
+        }
 
         parties_mares <- parties_mares where (area(each) > seuil_min_mare_m2);
         parties_camps <- parties_camps where (area(each) > seuil_min_campement_m2);
@@ -123,8 +165,17 @@ global {
                     shape       <- plus_proche;
                     location    <- plus_proche.centroid;
                     surface_max <- area(plus_proche);
-                    volume_eau  <- surface_max * 0.30;
-                    surface_eau <- min(surface_max, volume_eau * 2.0);
+                    est_ensemble1 <- surface_max >= seuil_surface_lit_ferlo;
+                    // La mare survit au changement de saison : seule son
+                    // emprise change. On conserve donc le NIVEAU d'eau et on en
+                    // redéduit le volume dans la nouvelle géométrie, au lieu de
+                    // réinitialiser le remplissage à une fraction fixe — ce qui
+                    // effaçait trois fois par an l'état du bilan hydrique.
+                    float niveau_conserve <- niveau_mare;
+                    do calibrer_geometrie;
+                    volume_eau  <- volume_max_reference
+                                 * (niveau_conserve ^ (alpha_forme + 1.0));
+                    surface_eau <- surface_pour_volume(volume_eau);
                     appariee    <- true;
                     remove plus_proche from: mares_restantes;
                 }
@@ -133,8 +184,15 @@ global {
         if (!empty(mares_restantes)) {
             create mare from: mares_restantes {
                 surface_max <- area(shape);
-                volume_eau  <- surface_max * 0.30;
-                surface_eau <- min(surface_max, volume_eau * 2.0);
+                // Appartenance au lit principal du Ferlo, approchée par la
+                // taille : Soti et al. (2010) note que les mares hors lit sont
+                // « generally smaller ». Faute d'une couche du lit fossile,
+                // c'est le meilleur proxy disponible ; il ne pilote que la
+                // taille du bassin versant.
+                est_ensemble1 <- surface_max >= seuil_surface_lit_ferlo;
+                do calibrer_geometrie;
+                volume_eau  <- volume_max_reference * remplissage_initial_mare;
+                surface_eau <- surface_pour_volume(volume_eau);
                 appariee    <- true;
             }
         }
@@ -177,8 +235,11 @@ global {
 
         if (length(mare) = 0) {
             create mare from: [zone_z3.centroid buffer (unite_z3 * 0.01)] {
-                surface_max <- area(shape); volume_eau <- surface_max * 0.05;
-                surface_eau <- min(surface_max, volume_eau * 2.0);
+                surface_max   <- area(shape);
+                est_ensemble1 <- surface_max >= seuil_surface_lit_ferlo;
+                do calibrer_geometrie;
+                volume_eau  <- volume_max_reference * remplissage_initial_mare;
+                surface_eau <- surface_pour_volume(volume_eau);
             }
         }
         if (length(campement) = 0) {
@@ -200,13 +261,28 @@ global {
         }
         ask occsol_polygone { do die; }
         write "Saison " + nouvelle_saison + " : " + length(mare) + " mares, "
-            + nb_campements + " campements, " + length(fond_geoms) + " polygones.";
+            + nb_campements + " campements, " + length(fond_geoms) + " polygones"
+            + (base_zone3 ? " [source zone3_entrainements]" : " [source occsol raster]") + ".";
     }
 
     reflex mise_a_jour_saison {
         string ns <- calculer_saison(jour_debut_simulation + cycle + 1);
         if (ns != saison) {
             do mettre_a_jour_occsol_saisonnier(ns);
+            // Entrée en saison des pluies : le stock d'œufs infectés qui vient
+            // de franchir la saison sèche est la mesure de la PERSISTANCE
+            // inter-épidémique — l'effet réel de la transmission verticale,
+            // celui que le R0 ne capte pas (Chitnis 2013).
+            if (ns = "Nduungu") {
+                oeufs_inf_report  <- empty(mare)
+                                     ? 0.0 : sum(mare collect each.oeufs_aedes_infectes);
+                taux_report_oeufs <- (oeufs_inf_pic > 0.0)
+                                     ? (oeufs_inf_report / oeufs_inf_pic) : 0.0;
+                write "PERSISTANCE : " + int(oeufs_inf_report)
+                    + " œufs infectés reportés sur un pic de " + int(oeufs_inf_pic)
+                    + " (taux de report " + with_precision(taux_report_oeufs, 4) + ")";
+                oeufs_inf_pic <- oeufs_inf_report;
+            }
             saison <- ns;
         }
     }
