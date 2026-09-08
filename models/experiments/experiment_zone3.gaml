@@ -133,8 +133,8 @@ experiment Zone3_J182_J242 type: gui {
                    + "  I=" + int(I_c_global) + "  R=" + int(R_c_global)
                     at: o + {0, zone_z3.height * 0.035}
                     color: #black font: font("Arial", 11, #plain);
-                draw "Vecteurs  Aedes=" + (length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur)
-                   + "   Culex=" + (length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur)
+                    draw "Vecteurs  Aedes=" + length(vecteur where (each.type_vecteur = "aedes"))
+                         + "   Culex=" + length(vecteur where (each.type_vecteur = "culex"))
                     at: o + {0, zone_z3.height * 0.065}
                     color: #black font: font("Arial", 11, #plain);
                 draw "Mares en eau : " + length(mare where (each.volume_eau > 0))
@@ -143,53 +143,24 @@ experiment Zone3_J182_J242 type: gui {
                     color: #black font: font("Arial", 11, #plain);
             }
 
-            // ---- 7. Légende -------------------------------------------------
             graphics "legende" refresh: false {
-                point o  <- {zone_z3.width * 0.70, zone_z3.height * 0.04};
-                float dy <- zone_z3.height * 0.029;
-                float r  <- unite_z3 * 0.006;
-                float rh <- unite_z3 * 0.007;
-                float rv <- unite_z3 * 0.004;
+                point o <- {zone_z3.width * 0.72, zone_z3.height * 0.05};
                 draw "LEGENDE" at: o color: #black font: font("Arial", 11, #bold);
-
-                draw "ANIMAUX (cercle)" at: o + {0, dy}
-                    color: rgb(70,70,70) font: font("Arial", 10, #bold);
-                draw circle(r) at: o + {r*1.5, dy*2} color: rgb(255,235,60)  border: rgb(60,60,60);
-                draw "sain (S)"      at: o + {r*4, dy*2} color: #black font: font("Arial", 10, #plain);
-                draw circle(r) at: o + {r*1.5, dy*3} color: rgb(255,150,0)   border: rgb(60,60,60);
-                draw "expose (E)"    at: o + {r*4, dy*3} color: #black font: font("Arial", 10, #plain);
-                draw circle(r) at: o + {r*1.5, dy*4} color: rgb(220,0,0)     border: rgb(60,60,60);
-                draw "infecte (I)"   at: o + {r*4, dy*4} color: #black font: font("Arial", 10, #plain);
-                draw circle(r) at: o + {r*1.5, dy*5} color: rgb(120,120,120) border: rgb(60,60,60);
-                draw "gueri (R)"     at: o + {r*4, dy*5} color: #black font: font("Arial", 10, #plain);
-
-                draw "HUMAINS (carre)" at: o + {0, dy*6.5}
-                    color: rgb(70,70,70) font: font("Arial", 10, #bold);
-                draw square(rh) at: o + {r*1.5, dy*7.5} color: rgb(120,200,255) border: rgb(40,40,40);
-                draw "sain (S)"      at: o + {r*4, dy*7.5} color: #black font: font("Arial", 10, #plain);
-                draw square(rh) at: o + {r*1.5, dy*8.5} color: rgb(255,150,0)   border: rgb(40,40,40);
-                draw "expose (E)"    at: o + {r*4, dy*8.5} color: #black font: font("Arial", 10, #plain);
-                draw square(rh) at: o + {r*1.5, dy*9.5} color: rgb(220,0,0)     border: rgb(40,40,40);
-                draw "infecte (I)"   at: o + {r*4, dy*9.5} color: #black font: font("Arial", 10, #plain);
-                draw square(rh) at: o + {r*1.5, dy*10.5} color: rgb(120,120,120) border: rgb(40,40,40);
-                draw "gueri (R)"     at: o + {r*4, dy*10.5} color: #black font: font("Arial", 10, #plain);
-
-                draw "VECTEURS" at: o + {0, dy*12}
-                    color: rgb(70,70,70) font: font("Arial", 10, #bold);
-                draw triangle(rv*2) at: o + {r*1.5, dy*13} color: #crimson;
-                draw "Aedes (triangle)"  at: o + {r*4, dy*13} color: #black font: font("Arial", 10, #plain);
-                draw circle(rv) at: o + {r*1.5, dy*14} color: #darkviolet;
-                draw "Culex (rond violet)" at: o + {r*4, dy*14} color: #black font: font("Arial", 10, #plain);
-
-                draw "ZONES" at: o + {0, dy*15.5}
-                    color: rgb(70,70,70) font: font("Arial", 10, #bold);
-                draw square(rh) at: o + {r*1.5, dy*16.5} color: rgb(20,110,160,0.75);
-                draw "mare en eau"  at: o + {r*4, dy*16.5} color: #black font: font("Arial", 10, #plain);
-                draw square(rh) at: o + {r*1.5, dy*17.5} color: rgb(162,85,34,0.5);
-                draw "campement"    at: o + {r*4, dy*17.5} color: #black font: font("Arial", 10, #plain);
-                draw square(rh) at: o + {r*1.5, dy*18.5} color: rgb(71,99,44,0.4);
-                draw "vegetation"   at: o + {r*4, dy*18.5} color: #black font: font("Arial", 10, #plain);
+                float d <- zone_z3.height * 0.032;
+                float r <- unite_z3 * 0.004;
+                draw circle(r) at: o + {r, d} color: #yellow border: #black;
+                draw "Animaux (cercle)" at: o + {r * 3, d} color: #black font: font("Arial", 9, #plain);
+                draw square(r) at: o + {r, d * 2} color: rgb(120,200,255) border: #black;
+                draw "Humains (carre)" at: o + {r * 3, d * 2} color: #black font: font("Arial", 9, #plain);
+                draw triangle(r * 1.5) at: o + {r, d * 3} color: #crimson;
+                draw "Aedes (triangle)" at: o + {r * 3, d * 3} color: #black font: font("Arial", 9, #plain);
+                draw circle(r * 0.75) at: o + {r, d * 4} color: #darkviolet;
+                draw "Culex (cercle violet)" at: o + {r * 3, d * 4} color: #black font: font("Arial", 9, #plain);
+                draw "Mare : bleu clair, eau : bleu fonce" at: o + {0, d * 5} color: #black font: font("Arial", 9, #plain);
+                draw "Campement : marron fonce" at: o + {0, d * 6} color: #black font: font("Arial", 9, #plain);
+                draw "Vegetation : vert fonce" at: o + {0, d * 7} color: #black font: font("Arial", 9, #plain);
             }
+
         }
 
         // =====================================================================
@@ -225,8 +196,8 @@ experiment Zone3_J182_J242 type: gui {
 
         display "Vecteurs — co-abondance" type: 2d {
             chart "Abondance des deux espèces (individus réels)" type: series background: #white axes: #black {
-                data "Aedes" value: length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur color: #darkred;
-                data "Culex" value: length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur color: #darkviolet;
+                data "Aedes" value: length(vecteur where (each.type_vecteur = "aedes")) color: #darkred;
+                data "Culex" value: length(vecteur where (each.type_vecteur = "culex")) color: #darkviolet;
             }
         }
 
@@ -239,12 +210,27 @@ experiment Zone3_J182_J242 type: gui {
             }
         }
 
+        display "SEIR humains" type: 2d {
+            chart "Humains" type: series background: #white axes: #black {
+                data "S" value: S_h_global color: #green;
+                data "E" value: E_h_global color: #orange;
+                data "I" value: I_h_global color: #red;
+                data "R" value: R_h_global color: #blue;
+            }
+        }
+
         display "Climat" type: 2d {
-            chart "Pluie" type: series background: #white size: {1.0,0.5} position: {0.0,0.0} axes: #black {
+            chart "Pluie" type: series background: #white size: {1.0,0.33} position: {0.0,0.0} axes: #black {
                 data "Pluie mm/j" value: pluie color: #cyan;
             }
-            chart "Température" type: series background: #white size: {1.0,0.5} position: {0.0,0.5} axes: #black {
+            chart "Température" type: series background: #white size: {1.0,0.33} position: {0.0,0.33} axes: #black {
                 data "T °C" value: temperature color: #red;
+            }
+            chart "Humidité" type: series background: #white size: {0.5,0.34} position: {0.0,0.66} axes: #black {
+                data "RH %" value: humidite_relative color: #blue;
+            }
+            chart "Vent" type: series background: #white size: {0.5,0.34} position: {0.5,0.66} axes: #black {
+                data "Vent m/s" value: vitesse_vent color: #darkgray;
             }
         }
 
@@ -262,8 +248,8 @@ experiment Zone3_J182_J242 type: gui {
 
         monitor "Mares en eau"    value: length(mare where (each.volume_eau > 0));
         monitor "Niveau moyen"    value: with_precision(empty(mare) ? 0.0 : mean(mare collect each.niveau_mare), 3);
-        monitor "Aedes (individus)" value: int(length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur);
-        monitor "Culex (individus)" value: int(length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur);
+        monitor "Aedes (agents)" value: length(vecteur where (each.type_vecteur = "aedes"));
+        monitor "Culex (agents)" value: length(vecteur where (each.type_vecteur = "culex"));
 
         monitor "Jours fenêtre animal" value: nb_jours_animal;
         monitor "Jours fenêtre Aedes"  value: nb_jours_aedes;
@@ -276,14 +262,24 @@ experiment Zone3_J182_J242 type: gui {
 }
 
 /**
- * Variante batch : 30 réplications sur la même fenêtre et la même base.
+ * Variante batch : 50 réplications sur la même fenêtre et la même base.
  */
-experiment "Batch_Zone3_30rep" type: batch repeat: 30 keep_seed: false
+experiment "Batch_Zone3_50rep" type: batch repeat: 50 keep_seed: false
     until: cycle >= duree_simulation - 1 {
     parameter "Base spatiale zone3" var: base_zone3 <- true;
     parameter "Jour de début"       var: jour_debut_simulation <- 182;
     parameter "Jour de fin"         var: jour_fin_simulation   <- 242;
     parameter "Durée"               var: duree_simulation      <- 60;
     parameter "Expérience"          var: type_experience <- "Animal";
-    parameter "Simulation ID"       var: simulation_id   among: range(1, 30);
+    parameter "Simulation ID"       var: simulation_id   among: range(1, 50);
+}
+
+experiment "Batch_Zone3_Aedes_50rep" type: batch repeat: 50 keep_seed: false
+    until: cycle >= duree_simulation - 1 {
+    parameter "Base spatiale zone3" var: base_zone3 <- true;
+    parameter "Jour de début"       var: jour_debut_simulation <- 182;
+    parameter "Jour de fin"         var: jour_fin_simulation   <- 242;
+    parameter "Durée"               var: duree_simulation      <- 60;
+    parameter "Expérience"          var: type_experience <- "Aedes";
+    parameter "Simulation ID"       var: simulation_id   among: range(1, 50);
 }

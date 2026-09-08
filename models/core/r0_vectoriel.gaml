@@ -2,7 +2,7 @@
  * R0 VECTORIEL — DEUX FORMES, EXPORTÉES CÔTE À CÔTE
  *
  *   (1) Capacité vectorielle de Garrett-Jones, formule du document de
- *       référence du projet (articles/CalculR0.pdf, éq. 2) :
+ *       référence du projet (articles/Un modèle basé sur des agents pour étudier l’impact de la mobilité.pdf, éq. 2) :
  *
  *           C  = m . a^2 . p^n / (-ln p)             R0 = C / r
  *
@@ -148,7 +148,7 @@ global {
                       "mare","x","y","m_local","a_local","p_local","R0_local",
                       "hotes_moyens","vecteurs_jours",
                       "R0_vectoriel","rho_recouvrement","lambda_gite",
-                      "surface_max_m2","surface_eau_m2","niveau_mare","est_lit_ferlo",
+                      "surface_max_m2","surface_eau_m2","niveau_mare","est_ensemble1",
                       "hotes_zpom_100","hotes_zpom_500","hotes_zpom_1000","fermeture_500",
                       "oeufs_infectes","oeufs_sains","saison"]
                     to: csv_r0_local format: "csv" rewrite: true;
@@ -239,18 +239,15 @@ global {
     }
 
     // =========================================================================
-    // DEUX R0, CALCULÉS UNE SEULE FOIS CHACUN
+    // UN SEUL R0 PAR EXPERIENCE, CALCULE UNE SEULE FOIS
     //
     // Le protocole ne demande pas un suivi par fenêtres glissantes mais UNE
     // valeur par grandeur, mesurée sur les premiers jours de la simulation :
     //
-    //     R0_animal  sur les 10 premiers jours
-    //     R0_Aedes   sur les 21 premiers jours
+    //     EXP Animal : R0_animal sur les 10 premiers jours
+    //     EXP Aedes  : R0_Aedes  sur les 21 premiers jours
     //
-    // Les deux fenêtres sont INDÉPENDANTES et démarrent ensemble au cycle 0.
-    // Chaque grandeur possède ses propres accumulateurs, arrêtés à la clôture
-    // de sa fenêtre : celle des Aedes continue de courir onze jours après que
-    // celle de l'animal s'est refermée.
+    // Une simulation n'active qu'une seule fenêtre selon type_experience.
     //
     // Les 21 jours de la fenêtre Aedes laissent le temps d'un cycle complet
     // œuf -> adulte, ce qui n'aurait pas de sens pour un R0 mesuré à partir
@@ -382,7 +379,7 @@ global {
     reflex accumuler_R0 {
         float nb_h <- float(length(humain) + length(animal)) * float(echelle_superindividu);
 
-        if (!R0_animal_calcule) {
+        if (type_experience = "Animal" and !R0_animal_calcule) {
             if (nb_h > 0.0) {
                 int nb_tous_v <- length(vecteur);
                 cumul_m_vect <- cumul_m_vect
@@ -393,7 +390,7 @@ global {
             nb_jours_animal  <- nb_jours_animal + 1;
         }
 
-        if (!R0_Aedes_calcule) {
+        if (type_experience = "Aedes" and !R0_Aedes_calcule) {
             if (nb_h > 0.0) {
                 int nb_aedes <- length(vecteur where (each.type_vecteur = "aedes"));
                 cumul_m_Aedes <- cumul_m_Aedes
@@ -406,12 +403,14 @@ global {
     }
 
     reflex clore_fenetre_animal
-        when: (!R0_animal_calcule and nb_jours_animal >= fenetre_R0_animal) {
+        when: (type_experience = "Animal" and !R0_animal_calcule
+               and nb_jours_animal >= fenetre_R0_animal) {
         do calculer_R0_animal_unique;
     }
 
     reflex clore_fenetre_aedes
-        when: (!R0_Aedes_calcule and nb_jours_aedes >= fenetre_R0_aedes) {
+        when: (type_experience = "Aedes" and !R0_Aedes_calcule
+               and nb_jours_aedes >= fenetre_R0_aedes) {
         do calculer_R0_aedes_unique;
     }
 

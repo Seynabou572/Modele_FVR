@@ -91,24 +91,24 @@ species zone_suivi {
     action recenser {
         list<animal> a_z <- animal overlapping shape;
         list<humain> h_z <- humain overlapping shape;
-        nb_animaux   <- length(a_z) * echelle_superindividu;
-        nb_animaux_S <- length(a_z where (each.etat_sante = "S")) * echelle_superindividu;
-        nb_animaux_E <- length(a_z where (each.etat_sante = "E")) * echelle_superindividu;
-        nb_animaux_I <- length(a_z where (each.etat_sante = "I")) * echelle_superindividu;
-        nb_animaux_R <- length(a_z where (each.etat_sante = "R")) * echelle_superindividu;
-        nb_humains   <- length(h_z) * echelle_superindividu;
-        nb_humains_S <- length(h_z where (each.etat_sante = "S")) * echelle_superindividu;
-        nb_humains_E <- length(h_z where (each.etat_sante = "E")) * echelle_superindividu;
-        nb_humains_I <- length(h_z where (each.etat_sante = "I")) * echelle_superindividu;
-        nb_humains_R <- length(h_z where (each.etat_sante = "R")) * echelle_superindividu;
+        nb_animaux   <- length(a_z);
+        nb_animaux_S <- length(a_z where (each.etat_sante = "S"));
+        nb_animaux_E <- length(a_z where (each.etat_sante = "E"));
+        nb_animaux_I <- length(a_z where (each.etat_sante = "I"));
+        nb_animaux_R <- length(a_z where (each.etat_sante = "R"));
+        nb_humains   <- length(h_z);
+        nb_humains_S <- length(h_z where (each.etat_sante = "S"));
+        nb_humains_E <- length(h_z where (each.etat_sante = "E"));
+        nb_humains_I <- length(h_z where (each.etat_sante = "I"));
+        nb_humains_R <- length(h_z where (each.etat_sante = "R"));
 
         list<vecteur> v_z <- vecteur overlapping shape;
         list<vecteur> ae  <- v_z where (each.type_vecteur = "aedes");
         list<vecteur> cx  <- v_z where (each.type_vecteur = "culex");
-        nb_aedes   <- length(ae) * echelle_si_vecteur;
-        nb_aedes_I <- length(ae where (each.etat_sante = "I")) * echelle_si_vecteur;
-        nb_culex   <- length(cx) * echelle_si_vecteur;
-        nb_culex_I <- length(cx where (each.etat_sante = "I")) * echelle_si_vecteur;
+        nb_aedes   <- length(ae);
+        nb_aedes_I <- length(ae where (each.etat_sante = "I"));
+        nb_culex   <- length(cx);
+        nb_culex_I <- length(cx where (each.etat_sante = "I"));
 
         // Gîtes couverts par la zone : œufs et eau.
         list<mare> m_z <- mare overlapping shape;
@@ -140,9 +140,9 @@ species zone_suivi {
     aspect fond {
         rgb c;
         switch type_zone {
-            match "mare"       { c <- rgb(31, 90, 110, 0.30); }
-            match "campement"  { c <- rgb(162, 85, 34, 0.22); }
-            match "vegetation" { c <- rgb(71, 99, 44, 0.10); }
+            match "mare"       { c <- rgb(173, 232, 244, 0.55); }
+            match "campement"  { c <- rgb(101, 67, 33, 0.65); }
+            match "vegetation" { c <- rgb(20, 100, 45, 0.35); }
             default            { c <- rgb(150, 150, 150, 0.08); }
         }
         draw shape color: c border: rgb(120, 120, 120, 0.18);

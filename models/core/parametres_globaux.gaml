@@ -328,9 +328,9 @@ global {
     list<geometry> fond_geoms   <- [];
     list<int>      fond_classes <- [];
     list<rgb> palette_occsol <- [
-        rgb(200,150,100), rgb(139,69,19),   rgb(0,51,204),
+        rgb(200,150,100), rgb(139,69,19),   rgb(101,67,33),
         rgb(173,232,244), rgb(34,139,34),   rgb(210,180,140),
-        rgb(189,183,107), rgb(180,180,180)
+        rgb(20,100,45),   rgb(180,180,180)
     ];
 
     float ndvi_moyen_global <- 0.3;

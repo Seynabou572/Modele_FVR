@@ -56,14 +56,14 @@ global {
     // champs utiles `Name` et `id_class`. Projection inchangée. Les fichiers
     // d'origine font autorité sur la branche `na`, où ils sont suivis par Git
     // LFS (git lfs fetch origin refs/remotes/origin/na).
-    file ZONE_SHP        <- file("../../data/occsol/shp/zone3_entrainements.shp");
+    file ZONE_SHP        <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/occsol/shp/zone3_entrainements.shp");
 
 
-    file OCCSOL_SHP      <- file("../../data/occsol/shp/occsol_z3_Ceedu2025.shp");
-    file SOL_SHP         <- file("../../data/sol/type_sol_z3.shp");
-    file VEGETATION_SHP  <- file("../../data/vegetation/type_vegetation_z3.shp");
-    file ROUTE_SHP       <- file("../../data/routes/chemin_z3.shp");
-    file CLIMAT_CSV      <- file("../../data/climat/Climat_2025.csv");
+    file OCCSOL_SHP      <- file("C:/Users/bmd/Gama_Workspace/Model_FVR./data/occsol/shp/occsol_z3_Ceedu2025.shp");
+    file SOL_SHP         <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/sol/type_sol_z3.shp");
+    file VEGETATION_SHP  <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/vegetation/type_vegetation_z3.shp");
+    file ROUTE_SHP       <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/routes/chemin_z3.shp");
+    file CLIMAT_CSV      <- file("C:/Users/bmd/Gama_Workspace/Model_FVR/data/climat/Climat_2025.csv");
     //file EAU_BINAIRE_SHP <- file("../../data/occsol/eau_binaire/eau_binaire_z3.shp");
 
     // =========================================================================

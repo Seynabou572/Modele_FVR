@@ -40,10 +40,11 @@ global {
     // version précédente en infectait 5 % dans les deux cas, ce qui ajoutait
     // cinq foyers concurrents et rendait le R0 mesuré incomparable à sa
     // définition — le nombre de cas secondaires issus d'UN cas index.
-    // `prevalence_culex_init` reste exposé pour les analyses de sensibilité.
+    // `prevalence_culex_init` est conservé comme paramètre documentaire, mais
+    // il n'est pas utilisé dans ces deux expériences protocolaires.
     // =========================================================================
     action initialiser_culex_fond(mare mare_exclue) {
-        int nb_infectes <- int(nb_culex_init * prevalence_culex_init);
+        int nb_infectes <- 0;
         list<mare> mares_dispo <- list((mare_exclue = nil) ? mare : (mare - mare_exclue));
 
         if (!empty(mares_dispo)) {
@@ -104,7 +105,9 @@ global {
                 float berge <- max(0.0, surface_max - surface_eau);
                 if (berge > 0.0) {
                     float oeufs <- berge * densite_oeufs_initiale_aedes;
-                    float inf   <- oeufs * prevalence_oeufs_initiale;
+                    float prevalence_initiale <- (type_experience = "Aedes")
+                                                ? prevalence_oeufs_initiale : 0.0;
+                    float inf   <- oeufs * prevalence_initiale;
                     oeufs_aedes_infectes <- oeufs_aedes_infectes + inf;
                     oeufs_aedes_sains    <- oeufs_aedes_sains + max(0.0, oeufs - inf);
                     if (inf > 0.0) { oeufs_index <- true; }
@@ -115,7 +118,7 @@ global {
             }
             write "Reservoir Aedes : " + int(total) + " oeufs quiescents deposes sur "
                 + nb_gites + " gites (" + int(total_inf) + " infectes, prevalence "
-                + prevalence_oeufs_initiale + ").";
+                + ((type_experience = "Aedes") ? prevalence_oeufs_initiale : 0.0) + ").";
             write "   densite " + densite_oeufs_initiale_aedes
                 + " oeufs/m2 de berge exondee (Soti et al. 2012).";
         }
@@ -169,8 +172,11 @@ global {
             + " piqûre/vecteur/jour à " + with_precision(temperature, 1) + " °C";
         write "  n (EIP) à " + with_precision(temperature, 1) + " °C = "
             + with_precision(eip_jours(temperature), 2) + " j";
-        write "  R0_animal calculé UNE FOIS sur les " + fenetre_R0_animal + " premiers jours ;";
-        write "  R0_Aedes  calculé UNE FOIS sur les " + fenetre_R0_aedes + " premiers jours.";
+        if (type_experience = "Animal") {
+            write "  EXP B : R0_animal calculé UNE FOIS sur les " + fenetre_R0_animal + " premiers jours ;";
+        } else {
+            write "  EXP A : R0_Aedes calculé UNE FOIS sur les " + fenetre_R0_aedes + " premiers jours.";
+        }
 
         create route from: ROUTE_SHP with: [
             code_route   :: int(read("CODE")),
@@ -222,7 +228,7 @@ global {
             if (camp != nil) {
                 create humain {
                     campement_origine <- camp;
-                    taille_groupe     <- echelle_si_vecteur;
+                    taille_groupe     <- echelle_superindividu;
                     location <- camp.location + {
                         rnd(-rayon_piqure_humain * 2, rayon_piqure_humain * 2),
                         rnd(-rayon_piqure_humain * 2, rayon_piqure_humain * 2)
@@ -239,7 +245,7 @@ global {
             if (camp != nil) {
                 create animal {
                     campement_origine <- camp;
-                    taille_groupe     <- echelle_si_vecteur;
+                    taille_groupe     <- echelle_superindividu;
                     location <- camp.location + {
                         rnd(-rayon_piqure_animal * 3, rayon_piqure_animal * 3),
                         rnd(-rayon_piqure_animal * 3, rayon_piqure_animal * 3)

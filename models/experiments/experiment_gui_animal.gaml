@@ -40,11 +40,20 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
             species campement aspect: default; species animal aspect: default;
             species humain aspect: default; species vecteur aspect: default;
             graphics "legende" {
-                draw ("Sim" + simulation_id + " | " + type_experience
-                    + " | J" + (jour_debut_simulation + cycle)
-                    + " | R0_anim=" + with_precision(R0_animal_10j, 3))
-                    at: {shape.width * 0.02, shape.height * 0.04}
-                    color: #black font: font("Times New Roman", 12, #bold);
+                point o <- {shape.width * 0.72, shape.height * 0.05};
+                draw "LEGENDE" at: o color: #black font: font("Arial", 11, #bold);
+                draw "Animaux: cercle" at: o + {0, shape.height * 0.035} color: #black font: font("Arial", 9, #plain);
+                draw "Humains: carre" at: o + {0, shape.height * 0.065} color: #black font: font("Arial", 9, #plain);
+                draw "Aedes: triangle; Culex: cercle violet" at: o + {0, shape.height * 0.095} color: #black font: font("Arial", 9, #plain);
+                draw "Mare: bleu clair / eau bleu fonce" at: o + {0, shape.height * 0.125} color: #black font: font("Arial", 9, #plain);
+                draw "Campement: marron fonce / Vegetation: vert fonce" at: o + {0, shape.height * 0.155} color: #black font: font("Arial", 9, #plain);
+            }
+        }
+
+        display "Etat simulation" type: 2d {
+            chart "Etat" type: series background: #white axes: #black {
+                data "R0 animal" value: R0_animal_10j color: #darkorange;
+                data "Seuil 1" value: 1.0 color: #red;
             }
         }
 
@@ -84,8 +93,8 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
         display "Climat" type: 2d {
             chart "Pluie"     type: series background: #white size: {0.5,0.5} position: {0.0,0.0} axes: #black { data "Pluie" value: pluie color: #cyan; }
             chart "Temp"      type: series background: #white size: {0.5,0.5} position: {0.5,0.0} axes: #black { data "T°C" value: temperature color: #red; }
-            chart "Humidité"  type: series background: #white size: {0.5,0.5} position: {0.0,0.5} axes: #black { data "RH %" value: humidite_relative color: #blue; }
-            chart "Vent"      type: series background: #white size: {0.5,0.5} position: {0.5,0.5} axes: #black { data "Vent m/s" value: vitesse_vent color: #darkgray; }
+            chart "Humidité" type: series background: #white size: {0.5,0.5} position: {0.0,0.5} axes: #black { data "RH %" value: humidite_relative color: #blue; }
+            chart "Vent" type: series background: #white size: {0.5,0.5} position: {0.5,0.5} axes: #black { data "Vent m/s" value: vitesse_vent color: #darkgray; }
         }
 
         display "Mares & Biomasse" type: 2d {
@@ -131,8 +140,8 @@ experiment "FVR Z3 — Expérience Animal (R0_animal)" type: gui {
         monitor "Infections totales (cumul)"  value: nb_infections_totales color: #red;
         monitor "Forçage hors enveloppe" value: forcage_hors_enveloppe;
         monitor "Cumul pluie série mm"   value: with_precision(cumul_pluie_serie, 0);
-        monitor "Aedes (individus)"      value: int(length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur);
-        monitor "Culex (individus)"      value: int(length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur);
+        monitor "Aedes (agents)"      value: length(vecteur where (each.type_vecteur = "aedes"));
+        monitor "Culex (agents)"      value: length(vecteur where (each.type_vecteur = "culex"));
         monitor "Zones avec infection"   value: length(zone_suivi where (each.jour_premiere_infection >= 0));
         monitor "Campements touchés"     value: length(zone_suivi where (each.type_zone = "campement" and each.jour_premiere_infection >= 0));
     }

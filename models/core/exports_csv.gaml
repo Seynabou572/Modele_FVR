@@ -20,25 +20,25 @@ import "../agents/vecteur.gaml"
 
 global {
 
-    string csv_journalier       <- "../outputs/journalier.csv";
-    string csv_populations      <- "../outputs/populations.csv";
-    string csv_r0_vectoriel     <- "../outputs/r0_vectoriel.csv";
-    string csv_r0_local         <- "../outputs/r0_local.csv";
-    string csv_incidence        <- "../outputs/incidence.csv";
-    string csv_climat           <- "../outputs/climat.csv";
-    string csv_mares            <- "../outputs/mares.csv";
-    string csv_moustiques       <- "../outputs/moustiques.csv";
-    string csv_controle_memoire <- "../outputs/controle_memoire.csv";
-    string csv_resume           <- "../outputs/resume.csv";
+    string csv_journalier       <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/journalier.csv";
+    string csv_populations      <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/populations.csv";
+    string csv_r0_vectoriel     <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/r0_vectoriel.csv";
+    string csv_r0_local         <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/r0_local.csv";
+    string csv_incidence        <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/incidence.csv";
+    string csv_climat           <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/climat.csv";
+    string csv_mares            <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/mares.csv";
+    string csv_moustiques       <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/moustiques.csv";
+    string csv_controle_memoire <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/controle_memoire.csv";
+    string csv_resume           <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/resume.csv";
 
     // Sorties spatiales : une ligne par ZONE et par pas d'export, jointes sur
     // id_zone dans QGIS. Les agrégats globaux (populations.csv, mares.csv)
     // n'ont aucune variance spatiale et ne peuvent donc pas servir à relier
     // conditions environnementales et apparition de l'infection.
-    string csv_zones_epidemio   <- "../outputs/zones_epidemio.csv";
-    string csv_zones_environ    <- "../outputs/zones_environnement.csv";
-    string csv_transmissions    <- "../outputs/transmissions.csv";
-    string csv_validation       <- "../outputs/validation.csv";
+    string csv_zones_epidemio   <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/zones_epidemio.csv";
+    string csv_zones_environ    <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/zones_environnement.csv";
+    string csv_transmissions    <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/transmissions.csv";
+    string csv_validation       <- "C:/Users/bmd/Gama_Workspace/Model_FVR/outputs/validation.csv";
 
     bool export_detail  <- true;
     // Les zones sont nombreuses (796) : un export journalier produirait
@@ -200,12 +200,15 @@ global {
 
     reflex export_populations when: export_detail {
         save [simulation_id, cycle,
-              length(humain where (each.etat_sante = "S")) * echelle_superindividu,
-              length(humain where (each.etat_sante = "E")) * echelle_superindividu,
-              length(humain where (each.etat_sante = "I")) * echelle_superindividu,
-              length(humain where (each.etat_sante = "R")) * echelle_superindividu,
-              int(S_c_global), int(E_c_global), int(I_c_global), int(R_c_global),
-              length(vecteur) * echelle_si_vecteur]
+              length(humain where (each.etat_sante = "S")),
+              length(humain where (each.etat_sante = "E")),
+              length(humain where (each.etat_sante = "I")),
+              length(humain where (each.etat_sante = "R")),
+              length(animal where (each.etat_sante = "S")),
+              length(animal where (each.etat_sante = "E")),
+              length(animal where (each.etat_sante = "I")),
+              length(animal where (each.etat_sante = "R")),
+              length(vecteur)]
             to: csv_populations format: "csv" rewrite: false;
     }
 
@@ -237,13 +240,13 @@ global {
 
     reflex export_moustiques when: export_detail {
         save [simulation_id, cycle,
-              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "S")) * echelle_si_vecteur,
-              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "E")) * echelle_si_vecteur,
-              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "I")) * echelle_si_vecteur,
-              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "S")) * echelle_si_vecteur,
-              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "E")) * echelle_si_vecteur,
-              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "I")) * echelle_si_vecteur,
-              length(vecteur) * echelle_si_vecteur]
+              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "S")),
+              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "E")),
+              length(vecteur where (each.type_vecteur = "aedes" and each.etat_sante = "I")),
+              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "S")),
+              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "E")),
+              length(vecteur where (each.type_vecteur = "culex" and each.etat_sante = "I")),
+              length(vecteur)]
             to: csv_moustiques format: "csv" rewrite: false;
     }
 
@@ -259,24 +262,27 @@ global {
         // propre fenetre. Si la simulation s'arrete avant, la valeur reste a
         // zero et le signale : c'est plus honnete qu'un calcul sur une fenetre
         // tronquee.
-        if (!R0_animal_calcule) {
+        if (type_experience = "Animal" and !R0_animal_calcule) {
             write "ATTENTION : simulation trop courte, R0_animal non calcule ("
                 + nb_jours_animal + "/" + fenetre_R0_animal + " jours).";
         }
-        if (!R0_Aedes_calcule) {
+        if (type_experience = "Aedes" and !R0_Aedes_calcule) {
             write "ATTENTION : simulation trop courte, R0_Aedes non calcule ("
                 + nb_jours_aedes + "/" + fenetre_R0_aedes + " jours).";
         }
 
         write "========== FIN | SimID=" + simulation_id
             + " | Exp=" + type_experience + " ==========";
-        write "-------- R0, CALCUL UNIQUE PAR GRANDEUR --------";
-        write "R0_animal (J1-J" + fenetre_R0_animal + ") : "
-            + with_precision(R0_animal_protocole, 4)
-            + "   [Garrett-Jones : " + with_precision(R0_animal_capacite, 4) + "]";
-        write "R0_Aedes  (J1-J" + fenetre_R0_aedes + ") : "
-            + with_precision(R0_Aedes_protocole, 4)
-            + "   [Garrett-Jones : " + with_precision(R0_Aedes_capacite, 4) + "]";
+        write "-------- R0, CALCUL UNIQUE POUR L'EXPERIENCE --------";
+        if (type_experience = "Animal") {
+            write "EXP B | R0_animal (J1-J" + fenetre_R0_animal + ") : "
+                + with_precision(R0_animal_protocole, 4)
+                + "   [Garrett-Jones : " + with_precision(R0_animal_capacite, 4) + "]";
+        } else {
+            write "EXP A | R0_Aedes (J1-J" + fenetre_R0_aedes + ") : "
+                + with_precision(R0_Aedes_protocole, 4)
+                + "   [Garrett-Jones : " + with_precision(R0_Aedes_capacite, 4) + "]";
+        }
         write "Infections totales : " + nb_infections_totales;
         write "-------- PERSISTANCE INTER-SAISONNIÈRE --------";
         write "Œufs infectés, pic     : " + int(oeufs_inf_pic);

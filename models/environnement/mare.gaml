@@ -293,19 +293,19 @@ species mare {
      */
     reflex recenser_zpom {
         if (zpom_500 != nil) {
-            hotes_zpom_500 <- (length(animal overlapping zpom_500)
-                             + length(humain overlapping zpom_500)) * echelle_superindividu;
+            hotes_zpom_500 <- length(animal overlapping zpom_500)
+                             + length(humain overlapping zpom_500);
         }
     }
 
     action recenser_zpom_complet {
         if (zpom_100 != nil) {
-            hotes_zpom_100 <- (length(animal overlapping zpom_100)
-                             + length(humain overlapping zpom_100)) * echelle_superindividu;
+            hotes_zpom_100 <- length(animal overlapping zpom_100)
+                             + length(humain overlapping zpom_100);
         }
         if (zpom_1000 != nil) {
-            hotes_zpom_1000 <- (length(animal overlapping zpom_1000)
-                              + length(humain overlapping zpom_1000)) * echelle_superindividu;
+            hotes_zpom_1000 <- length(animal overlapping zpom_1000)
+                              + length(humain overlapping zpom_1000);
         }
     }
 
@@ -498,10 +498,10 @@ species mare {
         // Deux traits : l'emprise maximale du gite en pointille clair, et la
         // surface EN EAU du jour en bleu plein. C'est ce contraste qui rend le
         // remplissage et le retrait visibles au fil de la simulation.
-        draw shape color: rgb(31, 90, 110, 0.15) border: rgb(31, 90, 110, 0.45);
+        draw shape color: rgb(173, 232, 244, 0.55) border: rgb(31, 90, 110, 0.45);
         if (surface_eau > 0.0) {
             float r <- sqrt(surface_eau / #pi);
-            draw circle(r) color: rgb(20, 110, 160, 0.75) border: rgb(10, 60, 100);
+            draw circle(r) color: rgb(0, 51, 204, 0.85) border: rgb(10, 30, 100);
         }
     }
 }

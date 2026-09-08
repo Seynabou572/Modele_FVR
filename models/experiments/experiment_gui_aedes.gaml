@@ -40,13 +40,20 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
             species humain    aspect: default;
             species vecteur   aspect: default;
             graphics "legende" {
-                draw ("Sim" + simulation_id + " | " + type_experience
-                    + " | J" + (jour_debut_simulation + cycle)
-                    + " | " + saison
-                    + " | R0_Aedes=" + with_precision(R0_Aedes_10j, 3)
-                    + " | R0_anim=" + with_precision(R0_animal_10j, 3))
-                    at: {shape.width * 0.02, shape.height * 0.04}
-                    color: #black font: font("Times New Roman", 12, #bold);
+                point o <- {shape.width * 0.72, shape.height * 0.05};
+                draw "LEGENDE" at: o color: #black font: font("Arial", 11, #bold);
+                draw "Animaux: cercle" at: o + {0, shape.height * 0.035} color: #black font: font("Arial", 9, #plain);
+                draw "Humains: carre" at: o + {0, shape.height * 0.065} color: #black font: font("Arial", 9, #plain);
+                draw "Aedes: triangle; Culex: cercle violet" at: o + {0, shape.height * 0.095} color: #black font: font("Arial", 9, #plain);
+                draw "Mare: bleu clair / eau bleu fonce" at: o + {0, shape.height * 0.125} color: #black font: font("Arial", 9, #plain);
+                draw "Campement: marron fonce / Vegetation: vert fonce" at: o + {0, shape.height * 0.155} color: #black font: font("Arial", 9, #plain);
+            }
+        }
+
+        display "Etat simulation" type: 2d {
+            chart "Etat" type: series background: #white axes: #black {
+                data "R0 Aedes" value: R0_Aedes_10j color: #purple;
+                data "Seuil 1" value: 1.0 color: #red;
             }
         }
 
@@ -70,18 +77,17 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
 
         display "Vecteurs" type: 2d {
             chart "Vecteurs" type: series background: #white axes: #black {
-                data "Aedes S" value: length(vecteur where (each.type_vecteur="aedes" and each.etat_sante="S")) * echelle_superindividu color: #pink;
-                data "Aedes I" value: length(vecteur where (each.type_vecteur="aedes" and each.etat_sante="I")) * echelle_superindividu color: #darkred;
-                data "Culex S" value: length(vecteur where (each.type_vecteur="culex" and each.etat_sante="S")) * echelle_superindividu color: #violet;
-                data "Culex I" value: length(vecteur where (each.type_vecteur="culex" and each.etat_sante="I")) * echelle_superindividu color: #darkviolet;
-                data "Aedes vertical I" value: length(vecteur where (each.type_vecteur="aedes" and each.origine_infection="verticale" and each.etat_sante="I")) * echelle_superindividu color: #orangered;
+                data "Aedes S" value: length(vecteur where (each.type_vecteur="aedes" and each.etat_sante="S")) color: #pink;
+                data "Aedes I" value: length(vecteur where (each.type_vecteur="aedes" and each.etat_sante="I")) color: #darkred;
+                data "Culex S" value: length(vecteur where (each.type_vecteur="culex" and each.etat_sante="S")) color: #violet;
+                data "Culex I" value: length(vecteur where (each.type_vecteur="culex" and each.etat_sante="I")) color: #darkviolet;
+                data "Aedes vertical I" value: length(vecteur where (each.type_vecteur="aedes" and each.origine_infection="verticale" and each.etat_sante="I")) color: #orangered;
             }
         }
 
         display "R₀ (fenêtres 10j)" type: 2d {
             chart "R₀ = C/r" type: series background: #white axes: #black {
                 data "R0_Aedes"  value: R0_Aedes_10j  color: #purple;
-                data "R0_animal" value: R0_animal_10j color: #darkorange;
                 data "Seuil=1"   value: 1.0           color: #red;
             }
         }
@@ -99,7 +105,7 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
             chart "R₀ mare par mare" type: series background: #white axes: #black {
                 data "R0 local médian" value: R0_local_median color: #teal;
                 data "R0 local max"    value: R0_local_max    color: #crimson;
-                data "R0 global (zone)" value: R0_animal_10j  color: #darkorange;
+                data "R0 global (zone)" value: R0_Aedes_10j  color: #purple;
                 data "Seuil=1"         value: 1.0             color: #red;
             }
         }
@@ -107,8 +113,8 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
         display "Climat" type: 2d {
             chart "Pluie"     type: series background: #white size: {0.5,0.5} position: {0.0,0.0} axes: #black { data "Pluie" value: pluie color: #cyan; }
             chart "Temp"      type: series background: #white size: {0.5,0.5} position: {0.5,0.0} axes: #black { data "T°C" value: temperature color: #red; }
-            chart "Humidité"  type: series background: #white size: {0.5,0.5} position: {0.0,0.5} axes: #black { data "RH %" value: humidite_relative color: #blue; }
-            chart "Vent"      type: series background: #white size: {0.5,0.5} position: {0.5,0.5} axes: #black { data "Vent m/s" value: vitesse_vent color: #darkgray; }
+            chart "Humidité" type: series background: #white size: {0.5,0.5} position: {0.0,0.5} axes: #black { data "RH %" value: humidite_relative color: #blue; }
+            chart "Vent" type: series background: #white size: {0.5,0.5} position: {0.5,0.5} axes: #black { data "Vent m/s" value: vitesse_vent color: #darkgray; }
         }
 
         display "Mares & Biomasse" type: 2d {
@@ -136,7 +142,6 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
         monitor "Facteur humidité" value: with_precision(facteur_humidite, 3);
         monitor "Facteur vent"    value: with_precision(facteur_vent, 3);
         monitor "R0_Aedes (J1-21)"  value: with_precision(R0_Aedes_10j, 4)  color: #purple;
-        monitor "R0_animal (J1-10)" value: with_precision(R0_animal_10j, 4) color: #darkorange;
         monitor "m_Aedes"         value: with_precision(m_Aedes_10j, 4);
         monitor "a_Aedes"         value: with_precision(a_Aedes_10j, 4);
         monitor "C_Aedes"         value: with_precision(C_Aedes_10j, 4);
@@ -148,7 +153,6 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
         monitor "Gîtes évalués"   value: nb_mares_evaluees;
         monitor "R0 local médian" value: with_precision(R0_local_median, 4) color: #teal;
         monitor "R0 protocole (Aedes)"  value: with_precision(R0_Aedes_protocole, 4)  color: #purple;
-        monitor "R0 protocole (animal)" value: with_precision(R0_animal_protocole, 4) color: #darkorange;
         monitor "R0 vectoriel médian"   value: with_precision(
             empty(mare) ? 0.0 : median(mare collect each.R0_vectoriel), 4) color: #seagreen;
         monitor "rho recouvrement max"  value: with_precision(
@@ -162,8 +166,8 @@ experiment "FVR Z3 — Expérience Aedes (R0_vectoriel)" type: gui {
         monitor "R0 local max"    value: with_precision(R0_local_max, 4) color: #crimson;
         monitor "Forçage hors enveloppe" value: forcage_hors_enveloppe;
         monitor "Cumul pluie série mm"   value: with_precision(cumul_pluie_serie, 0);
-        monitor "Aedes (individus)"      value: int(length(vecteur where (each.type_vecteur = "aedes")) * echelle_si_vecteur);
-        monitor "Culex (individus)"      value: int(length(vecteur where (each.type_vecteur = "culex")) * echelle_si_vecteur);
+        monitor "Aedes (agents)"      value: length(vecteur where (each.type_vecteur = "aedes"));
+        monitor "Culex (agents)"      value: length(vecteur where (each.type_vecteur = "culex"));
         monitor "Zones avec infection"   value: length(zone_suivi where (each.jour_premiere_infection >= 0));
         monitor "Campements touchés"     value: length(zone_suivi where (each.type_zone = "campement" and each.jour_premiere_infection >= 0));
         monitor "Gîtes R0>1"      value: nb_mares_R0_sup1 color: #crimson;
